@@ -1,0 +1,114 @@
+# TangledeepAccess - Claude Code Instructions
+
+TangledeepAccess makes **Tangledeep** (Impact Gameworks) playable by blind users.
+Speech is the primary interface; there is no visual fallback. If something fails
+silently, speaks stale data, or omits information, the player has no way to know.
+A logged failure is actionable; a silent one is invisible.
+
+## Game & environment (verified by decompile + binary inspection)
+
+- Engine: **Unity 2020.3.37f1, Mono, x64.** Full .NET 4.x BCL (mscorlib present,
+  netstandard absent), so the plugin targets **net472**. The game is turn-based,
+  8-direction tile movement, top-down camera following the hero. No real-time pressure.
+- Loader: **BepInEx 5.4.23.5 (x64)** + HarmonyX (`0Harmony.dll`). Vendored in
+  `third_party/bepinex/`; `setup-bepinex.ps1` installs it. Unlike Unity 5.x games,
+  **no entrypoint tweak is needed** — the upstream default config works.
+- Game code: `<game>\Tangledeep_Data\Managed\Assembly-CSharp.dll` (+ `-firstpass`).
+  Input is **Rewired** (`Rewired_Core.dll`), text is **TextMeshPro**.
+- Decompiled game source for reference: `../tangledeep-decompiled/` (OUTSIDE the repo,
+  never committed). Browse `Assembly-CSharp/` there. **Look up any game
+  type/method/field signature there before guessing.**
+- Logs: BepInEx writes `<game>\BepInEx\LogOutput.log`; Unity writes
+  `%USERPROFILE%\AppData\LocalLow\ImpactGameworks\Tangledeep\Player.log`. Mod lines go
+  through the BepInEx logger.
+
+## Speech: Prism (not Tolk directly)
+
+- Speech backend is **Prism** (https://github.com/ethindp/prism), a unified
+  screen-reader/TTS abstraction (and itself a Tolk replacement). v0.16.6 vendored at
+  `third_party/prism/` (`prism.dll` + `prism.h` + license). `prism.dll` is
+  self-contained: its screen-reader clients including the NVDA controller are
+  statically linked (verified against its import table), so it has no `tolk.dll` or
+  `nvdaControllerClient.dll` dependency. On this machine Prism selects **NVDA**.
+- The P/Invoke binding is hand-written in Core (`Speech/PrismNative.cs`) from the
+  vendored header — existing third-party C# Prism bindings are often incomplete/buggy.
+  ABI invariants, **audit `prism.h` after any Prism upgrade**:
+  - Calling convention **`__cdecl`** (`CallingConvention.Cdecl`) on every import.
+  - All boundary strings are **UTF-8**. net472 lacks `LPUTF8Str` /
+    `Marshal.PtrToStringUTF8`, so strings are marshaled by hand: inbound as
+    NUL-terminated `byte[]` (`PrismNative.ToUtf8`), outbound `const char*` via
+    `PrismNative.FromUtf8`. Never switch these to `LPStr`/`LPWStr`.
+  - C `bool` is one byte → `UnmanagedType.I1`. `size_t` → `UIntPtr`. Handles → `IntPtr`.
+  - `PrismContext*`/`PrismBackend*` are opaque. `create_best` returns an **owned**
+    backend (free with `prism_backend_free`); `acquire_best` is non-owning (do not free).
+  - Use `prism_backend_output` (screen-reader path: speech + braille) over
+    `prism_backend_speak` (TTS only).
+- Native loading: BepInEx loads the managed plugin from `BepInEx\plugins\...`, which
+  is not on the OS DLL search path. `NativeLoader` `LoadLibrary`s `prism.dll` by full
+  path before any P/Invoke, so the by-name imports bind to the already-loaded module.
+  `build.ps1` co-locates `prism.dll` with the plugin.
+
+## Build, deploy, test
+
+- `setup-bepinex.ps1` — install vendored BepInEx into the game (once per install /
+  after a game update wipes it).
+- `build.ps1` — build the plugin and deploy the single managed `TangledeepAccess.dll`
+  plus the native `prism.dll` into `<game>\BepInEx\plugins\TangledeepAccess\`.
+- `test.ps1` — offline xUnit suite (`dotnet test`), no game/Unity.
+- All scripts auto-locate the Steam install; override with `TANGLEDEEP_GAME`.
+- `<Version>` lives in `Directory.Build.props` (single source of truth; the plugin's
+  `BepInPlugin` literal is generated from it). `LangVersion` 7.3 (safe for Unity Mono).
+- **Build output** for every project goes to a single repo-root `artifacts/` folder
+  (`UseArtifactsOutput` in `Directory.Build.props`), NOT per-project `bin`/`obj`. The
+  plugin DLL lands at `artifacts/bin/TangledeepAccess/release/TangledeepAccess.dll`.
+- **Formatting:** CSharpier, pinned as a local tool (`.config/dotnet-tools.json`;
+  `dotnet tool restore` once). `dotnet csharpier format .` to format, `... check .` to
+  verify. 4 spaces, 100 cols (`.csharpierrc.json`). It also formats csproj/props XML.
+
+## Architecture
+
+The mod ships as **one managed assembly**. Two projects:
+- **`TangledeepAccess`** — the BepInEx plugin (net472), the only product assembly.
+  Engine/native glue (`Plugin`, `LogBepInExBackend`) at the root; engine-agnostic code
+  (Prism binding + speech wrapper, native loader, `Log` seam) under **`Core/`**, which
+  compiles straight in. References game/BepInEx assemblies.
+- **`TangledeepAccess.Tests`** — net8 + xUnit. References no product DLL: it **links the
+  plugin's `Core/**` sources directly** (`<Compile Include>`) and tests them off-engine.
+
+**The `Core/` rule:** anything under `TangledeepAccess/Core/` must compile with only the
+BCL — no Unity, no BepInEx, no Harmony. The test build enforces this (those files are
+compiled on net8). Engine-touching code lives outside `Core/`. This is what keeps the
+single shipped DLL unit-testable without a second assembly. Internal types under `Core/`
+(e.g. `PrismNative`) are visible to tests because the sources compile into the test
+assembly — no `InternalsVisibleTo` needed. Put testable logic under `Core/`.
+
+**Plugin lifecycle.** `Awake` does only non-Unity setup (logging, native preload,
+Prism init — all pure native, no Unity state). The spoken startup line is deferred to
+`Update` after a short frame countdown. `Update` is where per-frame announcement
+pumping will live. Never speak from a Harmony hook — hooks set state/flags; speak once
+per frame from the pump.
+
+## Conventions (carried from hand-of-fate-access; apply as the mod grows)
+
+- **No silent failures.** Every catch in a Harmony patch / reflection path logs via
+  `Log.Warn`/`Log.Error`. A swallowed exception silently kills a feature the blind
+  player can't see fail.
+- **Never cache game state.** Re-query the game at speak time; stale speech is worse
+  than none. The only acceptable "cache" is a live reference to a game object whose
+  properties you read on demand.
+- **Reuse the game's own strings.** Tangledeep centralizes text in `StringManager`
+  (`GetString(refName)`) and has pre-built description builders
+  (`BuildHoverTextFromMonster`, `GetInformationForTooltip`, ...). Speak those; don't
+  hardcode. Mod-authored strings go in one central place (for future translation), not
+  inline literals.
+- **High-value hook target:** `GameLogScript` (`EnqueueEndOfTurnLogMessage`) is the
+  centralized turn-by-turn event log — nearly every gameplay event flows through it as
+  text. Piping it to speech is the biggest early win.
+- The two genuinely visual problems to design around: **ranged ability targeting**
+  (`PlayerInputTargetingManager`, `TargetingLineScript`) and **spatial awareness** of
+  the surrounding grid (`MapMasterScript`, `MapTileData`, `FogOfWarScript`). Both are
+  solvable — the underlying data is all queryable in code.
+- **Combat is variable-speed** (a `SPEED` stat, haste/slow), not strict you-then-them.
+  Announce each enemy action as it happens; don't assume lockstep turns.
+- Don't over-null-check — let it crash where null isn't expected (a crash is visible).
+  Comments describe current state, not change history.

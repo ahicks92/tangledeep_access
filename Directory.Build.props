@@ -1,0 +1,17 @@
+<Project>
+    <!-- Shared defaults for all projects. Individual projects may override
+       (e.g. the test project sets LangVersion to latest). -->
+    <PropertyGroup>
+        <Version>0.1.0</Version>
+        <!-- 7.3 is the highest C# version that needs no runtime/BCL support beyond
+         what Unity 2020.3's Mono provides; keep the plugin on it. -->
+        <LangVersion>7.3</LangVersion>
+
+        <!-- Consolidate ALL build output (bin + obj, every project) under a single
+         repo-root artifacts/ folder instead of per-project bin/ and obj/ dirs
+         interleaved with source. Layout: artifacts/{bin,obj,publish}/<project>/<config>.
+         Must live in Directory.Build.props (the SDK reads it before project eval). -->
+        <UseArtifactsOutput>true</UseArtifactsOutput>
+        <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+    </PropertyGroup>
+</Project>

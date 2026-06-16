@@ -1,0 +1,31 @@
+# Decompiled game source lives OUTSIDE this repo (../tangledeep-decompiled) and
+# must never be committed. This pattern guards against an accidental in-repo copy.
+tangledeep-decompiled/
+*-decompiled/
+
+# .NET build output. UseArtifactsOutput (Directory.Build.props) routes everything
+# to artifacts/; bin/ and obj/ stay listed in case a tool ever falls back to them.
+artifacts/
+bin/
+obj/
+*.user
+*.suo
+
+# Release staging + zips (assembled by release.ps1)
+/release/
+
+# Local Claude settings (machine paths, local permission grants)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# IDE
+.vs/
+.idea/
+
+# OS cruft
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# NOTE: third_party/ (vendored Prism + BepInEx) IS committed on purpose so the
+# build is reproducible without re-downloading. The decompiled GAME code is not.

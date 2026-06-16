@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <!--
+    Offline unit tests for the engine-agnostic core. Runs on a modern runtime
+    with no Unity, no BepInEx, no game launch. There is no Core assembly to
+    reference: the plugin's Core/ sources are LINKED and compiled directly into
+    this test assembly (the same files the plugin ships). Internal types (e.g.
+    PrismNative) are therefore visible here without InternalsVisibleTo.
+  -->
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <Nullable>disable</Nullable>
+        <IsPackable>false</IsPackable>
+        <AssemblyName>TangledeepAccess.Tests</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+        <PackageReference Include="xunit" Version="2.9.2" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    </ItemGroup>
+
+    <!-- Link the engine-agnostic sources from the plugin. Anything under Core/
+       must compile with only the BCL (no Unity/BepInEx), enforced by this build. -->
+    <ItemGroup>
+        <Compile Include="..\TangledeepAccess\Core\**\*.cs" LinkBase="Core" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,92 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <!-- Unity 2020.3 Mono ships the full .NET 4.x BCL (mscorlib present,
+         netstandard absent), so the plugin targets net472. -->
+        <TargetFramework>net472</TargetFramework>
+        <OutputType>Library</OutputType>
+        <AssemblyName>TangledeepAccess</AssemblyName>
+        <RootNamespace>TangledeepAccess</RootNamespace>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+
+        <!-- Game install root. Override with the TANGLEDEEP_GAME environment variable
+         (MSBuild surfaces env vars as properties); falls back to the default Steam
+         location. Game/Unity assemblies are referenced from here. -->
+        <Game Condition="'$(TANGLEDEEP_GAME)' != ''">$(TANGLEDEEP_GAME)</Game>
+        <Game Condition="'$(Game)' == ''"
+            >C:\Program Files (x86)\Steam\steamapps\common\Tangledeep</Game>
+        <Managed>$(Game)\Tangledeep_Data\Managed</Managed>
+        <!-- BepInEx + Harmony are referenced from the repo's vendored copy so the
+         build works before BepInEx is installed into the game. -->
+        <BepInExCore>$(MSBuildThisFileDirectory)..\third_party\bepinex\BepInEx\core</BepInExCore>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference
+            Include="Microsoft.NETFramework.ReferenceAssemblies"
+            Version="1.0.3"
+            PrivateAssets="all"
+        />
+    </ItemGroup>
+
+    <!-- Generate the Plugin.PluginVersion constant from <Version> (Directory.Build.props)
+       so the BepInPlugin attribute, which needs a compile-time literal, has one source
+       of truth. The file lands under obj\, excluded from the default Compile glob; the
+       ";" is escaped as %3B in MSBuild. -->
+    <Target Name="GeneratePluginVersion" BeforeTargets="CoreCompile">
+        <PropertyGroup>
+            <GeneratedVersionFile>$(IntermediateOutputPath)PluginVersion.g.cs</GeneratedVersionFile>
+            <GeneratedVersionSource>namespace TangledeepAccess { public partial class Plugin { public const string PluginVersion = "$(Version)"%3B } }</GeneratedVersionSource>
+        </PropertyGroup>
+        <WriteLinesToFile
+            File="$(GeneratedVersionFile)"
+            Lines="$(GeneratedVersionSource)"
+            Overwrite="true"
+            WriteOnlyWhenDifferent="true"
+        />
+        <ItemGroup>
+            <Compile Include="$(GeneratedVersionFile)" />
+            <FileWrites Include="$(GeneratedVersionFile)" />
+        </ItemGroup>
+    </Target>
+
+    <!-- Engine-agnostic logic (Prism binding, speech, native loader) lives under
+       Core/ and compiles straight into this single plugin assembly. The test
+       project links the same Core/ sources to exercise them off-engine. -->
+
+    <!-- BepInEx + Harmony from the vendored core. -->
+    <ItemGroup>
+        <Reference Include="BepInEx">
+            <HintPath>$(BepInExCore)\BepInEx.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="0Harmony">
+            <HintPath>$(BepInExCore)\0Harmony.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+
+    <!-- Game assemblies. Unity 2020.3 splits the engine into modules; MonoBehaviour
+       lives in UnityEngine.CoreModule. Assembly-CSharp(+firstpass) hold the game's
+       own code (referenced now so the imminent Harmony work needs no csproj edit). -->
+    <ItemGroup>
+        <!-- The monolithic UnityEngine.dll is a type-forward facade; BepInEx's
+         BaseUnityPlugin is compiled against it, so it must be referenced even
+         though MonoBehaviour's implementation lives in CoreModule. -->
+        <Reference Include="UnityEngine">
+            <HintPath>$(Managed)\UnityEngine.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule">
+            <HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Assembly-CSharp">
+            <HintPath>$(Managed)\Assembly-CSharp.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Assembly-CSharp-firstpass">
+            <HintPath>$(Managed)\Assembly-CSharp-firstpass.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+</Project>
