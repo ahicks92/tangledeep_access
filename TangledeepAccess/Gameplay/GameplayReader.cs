@@ -15,6 +15,15 @@ namespace TangledeepAccess.Gameplay {
     internal static class GameplayReader {
         /// <summary>Speak the result of a gameplay query, or null if not in play.</summary>
         public static string Execute(GameplayCommand command) {
+            // Help is static text and useful even mid-transition, so answer it before the
+            // in-play gate.
+            if (command == GameplayCommand.Help) {
+                return "Tangledeep Access commands. K, read here and exits. "
+                    + "L, scan in view. Y, status. A, hotbar. Semicolon, look cursor; "
+                    + "then arrows or numpad to move it, Home to recenter. Apostrophe, repeat. "
+                    + "Slash, this help.";
+            }
+
             HeroPC hero = GameMasterScript.heroPCActor;
             if (hero == null || !GameMasterScript.actualGameStarted || MapMasterScript.activeMap == null) {
                 return null;

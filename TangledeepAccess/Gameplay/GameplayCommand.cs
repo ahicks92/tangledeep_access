@@ -21,6 +21,9 @@ namespace TangledeepAccess.Gameplay {
         /// <summary>Repeat the last spoken phrase (handled in the pump, which holds the speech).</summary>
         RepeatLast,
 
+        /// <summary>Speak the list of mod commands (onboarding / reminder).</summary>
+        Help,
+
         /// <summary>Toggle the look cursor (examine tiles without moving the hero).</summary>
         LookToggle,
 
