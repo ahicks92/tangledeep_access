@@ -49,13 +49,18 @@ namespace TangledeepAccess.Overlays {
         /// intro/prompt dialog is up.
         /// </summary>
         public OverlayResult Handler() {
-            bool jobGrid = CharCreation.creationActive && FocusedJobIndex() >= 0;
-            // Title-screen feat select only, so a stale CreateStage can never shadow an in-game
-            // dialog (the same guard SaveSlotOverlay uses).
+            // Gate the whole overlay to the title-screen creation flow. The game leaves
+            // nameInputOpen true and CreateStage at NAMEINPUT after a game starts, so without
+            // this guard the name-entry branch would wrongly claim every in-game screen and
+            // shadow the generic overlay. (In-game job/feat respec is a separate future case.)
             bool onTitle = GameMasterScript.gmsSingleton != null
                 && GameMasterScript.gmsSingleton.titleScreenGMS;
-            bool featSelect = onTitle
-                && TitleScreenScript.CreateStage == CreationStages.PERKSELECT
+            if (!onTitle) {
+                return OverlayResult.Inactive;
+            }
+
+            bool jobGrid = CharCreation.creationActive && FocusedJobIndex() >= 0;
+            bool featSelect = TitleScreenScript.CreateStage == CreationStages.PERKSELECT
                 && UIManagerScript.dialogBoxOpen;
             return jobGrid || UIManagerScript.nameInputOpen || featSelect
                 ? OverlayResult.Active(this)
