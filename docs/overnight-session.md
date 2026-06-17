@@ -58,7 +58,14 @@ Tangledeep is playable by ear through actual combat.
 ## Known gaps / next (in rough priority)
 
 - **Inventory item actions** (use/equip/drop from the panel) not verified end to end.
-- Deeper-floor hazards (traps, status terrain) read as coarse tile types only.
+- Deeper-floor hazards: damaging terrain (lava/water/mud/electric) is now named, but trap
+  *objects* rely on the scanner/hover and were not exercised.
+
+Verification notes: **level-up / JP-skill notifications read via the game log** (seen
+organically in the combat iteration); the dialog-body announce channel itself is proven on
+NPC shop dialogue. A synthetic `ChangeExperience` eval is a poor proxy (it crosses a JP
+threshold without a clean stat level-up and bypasses the log write), so treat organic play,
+not eval grants, as the source of truth here.
 - **Custom name typing** in creation is deferred (default + RANDOM suffice).
 - Terrain is the coarse tile type ("ground"/"water"/"wall").
 
