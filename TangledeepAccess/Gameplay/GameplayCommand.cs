@@ -15,6 +15,9 @@ namespace TangledeepAccess.Gameplay {
         /// <summary>Read the hero's vitals: health, stamina, energy, level, active effects.</summary>
         ReadStatus,
 
+        /// <summary>Repeat the last spoken phrase (handled in the pump, which holds the speech).</summary>
+        RepeatLast,
+
         /// <summary>Toggle the look cursor (examine tiles without moving the hero).</summary>
         LookToggle,
 

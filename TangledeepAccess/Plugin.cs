@@ -112,7 +112,10 @@ namespace TangledeepAccess {
             // On-demand spatial queries (read-here / scan) the gameplay hotkey hook requested.
             // Explicit player queries interrupt, so the answer is immediate.
             GameplayCommand? gameplay = UiRuntime.ConsumePendingGameplay();
-            if (gameplay.HasValue) {
+            if (gameplay == GameplayCommand.RepeatLast) {
+                // Re-speak the last phrase; handled here since the pump owns the speech instance.
+                _speech?.Speak(_speech.LastSpoken);
+            } else if (gameplay.HasValue) {
                 string spoken = GameplayReader.Execute(gameplay.Value);
                 if (!string.IsNullOrEmpty(spoken)) {
                     _speech?.Speak(spoken);

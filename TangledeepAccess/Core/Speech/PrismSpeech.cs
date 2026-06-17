@@ -27,6 +27,9 @@ namespace TangledeepAccess.Speech {
         /// <summary>True once a backend was created and initialized successfully.</summary>
         public bool Available { get; private set; }
 
+        /// <summary>The most recent non-empty text sent to speech, for a repeat-last hotkey.</summary>
+        public string LastSpoken { get; private set; }
+
         /// <summary>Name of the chosen backend (e.g. "NVDA", "SAPI"), once available.</summary>
         public string BackendName { get; private set; }
 
@@ -90,6 +93,8 @@ namespace TangledeepAccess.Speech {
             if (string.IsNullOrEmpty(text)) {
                 return;
             }
+
+            LastSpoken = text;
 
             // Capture for the dev /speech tap BEFORE the availability gate, so the driver can
             // read spoken text even when Prism is disabled (headless/overnight, no NVDA).
