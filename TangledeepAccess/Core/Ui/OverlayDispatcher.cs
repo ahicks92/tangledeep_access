@@ -27,7 +27,6 @@ namespace TangledeepAccess.Ui {
         private bool _hasActiveLast;
         private OverlayId _activeLast;
         private ControlId _lastSpoken;
-        private object _lastAnnounceKey;
         private object _pendingGameFocus;
 
         /// <summary>
@@ -78,7 +77,6 @@ namespace TangledeepAccess.Ui {
             if (_hasActiveLast && (!hasActive || !activeId.Equals(_activeLast))) {
                 _cache.Remove(_activeLast);
                 _lastSpoken = null;
-                _lastAnnounceKey = null;
             }
 
             _hasActiveLast = hasActive;
@@ -180,7 +178,6 @@ namespace TangledeepAccess.Ui {
                 _cache.Remove(overlay.Id);
                 _hasActiveLast = false;
                 _lastSpoken = null;
-                _lastAnnounceKey = null;
                 WantsInputCapture = false;
                 CapturesInputExplicitly = false;
                 return TickResult.Empty;
@@ -190,17 +187,6 @@ namespace TangledeepAccess.Ui {
             // it (a single-node modal we drive ourselves, e.g. a Continue dialog).
             CapturesInputExplicitly = graph.Current.ForceCapture;
             WantsInputCapture = graph.Current.Nodes.Count > 1 || graph.Current.ForceCapture;
-
-            // One-shot announcement: when its key changes, append the text to this tick's
-            // message before the focus label, so screen content that appeared without a focus
-            // move (dialog body, tutorial text) is spoken once. Independent of focus dedupe.
-            bool announced = false;
-            if (graph.Current.Announce != null
-                && !Equals(graph.Current.AnnounceKey, _lastAnnounceKey)) {
-                graph.Current.Announce(ctx);
-                _lastAnnounceKey = graph.Current.AnnounceKey;
-                announced = true;
-            }
 
             if (command.HasValue) {
                 return ApplyNav(graph, state, ctx, message, command.Value);
@@ -212,7 +198,7 @@ namespace TangledeepAccess.Ui {
             // node) onto whatever button the game had focused. Passive overlays — including
             // multi-node ones like the job grid that merely satisfy the generic nodes>1 capture
             // rule — must keep following the game's focus, or they fall silent after the first node.
-            return Follow(graph, state, ctx, message, graph.Current.ForceCapture ? null : gameFocus, announced);
+            return Follow(graph, state, ctx, message, graph.Current.ForceCapture ? null : gameFocus);
         }
 
         private TickResult ApplyNav(
@@ -262,28 +248,23 @@ namespace TangledeepAccess.Ui {
             GraphState state,
             OverlayCtx ctx,
             MessageBuilder message,
-            object gameFocus,
-            bool announced
+            object gameFocus
         ) {
             // Sync to the game's focus if it moved (tier-1 reference match).
             if (gameFocus != null) {
                 graph.FocusByReference(gameFocus);
             }
 
-            // Speak the focus label when focus changed; the announcement (already appended to
-            // the message) speaks even when it did not, so just-appeared text is not swallowed.
+            // Speak the focus label only when focus changed.
             ControlId cur = state.CurKey;
-            bool focusChanged = cur != null && !cur.Equals(_lastSpoken);
-            if (focusChanged) {
-                _lastSpoken = cur;
-                GraphNode node;
-                if (graph.Current.Nodes.TryGetValue(cur, out node) && node.Vtable.Label != null) {
-                    node.Vtable.Label(ctx);
-                }
+            if (cur == null || cur.Equals(_lastSpoken)) {
+                return TickResult.Empty;
             }
 
-            if (!focusChanged && !announced) {
-                return TickResult.Empty;
+            _lastSpoken = cur;
+            GraphNode node;
+            if (graph.Current.Nodes.TryGetValue(cur, out node) && node.Vtable.Label != null) {
+                node.Vtable.Label(ctx);
             }
 
             return new TickResult { Speak = message.Build() };

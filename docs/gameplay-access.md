@@ -37,23 +37,6 @@ below. `SaveSlotOverlay` and `CharCreationOverlay` both gate on precise conditio
 (`CreateStage`, `creationActive` + a focused job button, `nameInputOpen`) rather than a
 broad "are we in creation" flag.
 
-## The one-shot announcement channel
-
-The dispatcher's normal job is to speak the *focused* control and dedupe repeats. But much
-game text appears with **no focus move**: a dialog's body, a tutorial popup, a level-up
-prompt, the new-game story. To speak those, an overlay can declare an *announcement* on its
-build: `builder.Announce(key, text)`. The dispatcher speaks the text once each time the
-value-equatable `key` changes between frames, prepended to the focus label and independent
-of the focus dedupe.
-
-Keying by the **content itself** gives exactly-once behavior for free: a build that
-re-renders every frame with the same text announces once; a changed message (the next
-dialog page, a new random name) re-announces. `DialogOverlay` keys on the body text;
-`CharCreationOverlay`'s name screen keys on the current name. This is a general primitive,
-not a dialog hack — tutorials and level-ups will reuse it. Implemented in `GraphRender`
-(carries `AnnounceKey`/`Announce`), `GraphBuilder`/`IOverlayBuilder` (the `Announce` API),
-and `OverlayDispatcher` (tracks the last key, emits once, resets when the overlay closes).
-
 ## Why character creation is read-only follow-and-speak
 
 The whole new-game flow runs in **title-screen context**, where `TDInputHandler.UpdateInput`
@@ -121,19 +104,6 @@ so consuming them shadows nothing. The hook only *requests* a command
 same hook-requests / pump-executes split used for menu nav and the log, which keeps all
 game-state reads and speech on the main-thread pump and out of Harmony hooks.
 
-## Full-screen panels (inventory / equipment / skills / character sheet)
-
-These use the newer ImpactUI scrolling-column model, not the legacy `uiObjectFocus`
-neighbor graph the generic overlay mirrors, so the rich tooltip is invisible to the generic
-reader. A postfix on `ImpactUI_Base.OnColumnUpdateFocus` — the one base method every such
-panel raises on selection change — reads the selected button's `GetContainedData()` (an
-`ISelectableUIObject`: Item, Equipment, AbilityScript, JobAbility) and records `GetNameForUI`
-+ `GetInformationForTooltip` into `PanelReader` for the pump to speak. The generic overlay
-still voices the button's *name* as focus lands (the column buttons' `myUIObject`s are in the
-legacy graph), so the hook strips the leading name from the tooltip to avoid a double — the
-player hears "name" then "detail". The hook does not capture input; the column drives its own
-arrow navigation, and this is a pure announce-on-change like the game log.
-
 Note: the game leaves `nameInputOpen`/`CreateStage` set after a game starts, so the
 character-creation overlay is gated to `titleScreenGMS` to avoid it shadowing in-game screens.
 
@@ -143,13 +113,6 @@ character-creation overlay is gated to `titleScreenGMS` to avoid it shadowing in
 as the aim cursor moves while targeting a ranged weapon or point/area ability. A postfix
 hands the tile to `TargetingReader`, which the pump speaks: tile contents (shared
 `TileDescriber`), direction/distance from the hero, and valid/invalid. Deduped by tile.
-
-## Shops
-
-The shop is a legacy `uiObjectFocus` screen, so the generic overlay already voices each item
-button's name. A postfix on `ShopUIScript.ShowItemInfo` reads the rank/rarity/description and
-gold cost the game renders into `shopItemInfoText` (ending "COST: Ng") into `PanelReader`.
-The name stays with the generic overlay (the info text leads with the rank, so no double).
 
 ## Passive announcements (pump-polled, no input)
 

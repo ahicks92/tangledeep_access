@@ -60,17 +60,6 @@ namespace TangledeepAccess.Ui {
             Action<OverlayCtx, Modifiers> onClick
         );
 
-        // --- One-shot announcement (orthogonal to nodes) ---
-
-        /// <summary>
-        /// Declare a one-shot announcement: <paramref name="text"/> is spoken once each time
-        /// <paramref name="key"/> (value-equatable) changes between ticks, prepended to the
-        /// focus label and independent of navigation. Use for content that appears on screen
-        /// without a focus move — dialog body text, tutorial popups, level-up prompts. Calling
-        /// it more than once per build keeps the last; needs at least one node to ride along.
-        /// </summary>
-        IOverlayBuilder Announce(object key, Action<OverlayCtx> text);
-
         // --- Input ownership ---
 
         /// <summary>
