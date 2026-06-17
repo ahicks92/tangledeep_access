@@ -4,6 +4,7 @@ using System.Reflection;
 using BepInEx;
 using HarmonyLib;
 using TangledeepAccess.Dev;
+using TangledeepAccess.Gameplay;
 using TangledeepAccess.Native;
 using TangledeepAccess.Overlays;
 using TangledeepAccess.Speech;
@@ -104,6 +105,14 @@ namespace TangledeepAccess {
 
             if (!string.IsNullOrEmpty(result.Speak)) {
                 _speech?.Speak(result.Speak);
+            }
+
+            // Spontaneous game-log events (combat, status, NPC barks) the Harmony hook buffered
+            // this frame. Spoken without interrupting so a multi-event turn is not chopped, and
+            // after any overlay speech above so menu navigation stays responsive.
+            string log = GameEventLog.DrainToMessage();
+            if (!string.IsNullOrEmpty(log)) {
+                _speech?.Speak(log, interrupt: false);
             }
         }
     }
