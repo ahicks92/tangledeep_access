@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Threading;
 using TangledeepAccess.Speech;
 using TangledeepAccess.Util;
@@ -23,17 +24,18 @@ namespace TangledeepAccess.Dev {
         public const string PortEnv = "TANGLEDEEP_DEV_PORT";
         private const int DefaultPort = 8770;
 
-        private sealed class EvalJob {
-            public string Code;
+        private sealed class Job {
+            public Func<string> Work;
             public string Result = "";
             public readonly ManualResetEventSlim Done = new ManualResetEventSlim(false);
         }
 
         private readonly SpeechLog _speech = new SpeechLog();
         private readonly CSharpEvaluator _evaluator = new CSharpEvaluator();
-        private readonly ConcurrentQueue<EvalJob> _jobs = new ConcurrentQueue<EvalJob>();
+        private readonly ConcurrentQueue<Job> _jobs = new ConcurrentQueue<Job>();
         private DevHttpServer _http;
         private bool _enabled;
+        private bool _runInBackgroundForced;
 
         /// <summary>Stand up the server if TANGLEDEEP_DEV=1; otherwise stay inert.</summary>
         public void Start() {
@@ -60,20 +62,36 @@ namespace TangledeepAccess.Dev {
             }
         }
 
-        /// <summary>Run queued eval jobs on the main thread. Call once per frame from Update.</summary>
+        /// <summary>Run queued main-thread jobs. Call once per frame from Update.</summary>
         public void Pump() {
             if (!_enabled) {
                 return;
             }
-            EvalJob job;
+            if (!_runInBackgroundForced) {
+                // Insurance: keep the game simulating while unfocused, which is how we drive it.
+                // Tangledeep already ships this true; guard against a future patch flipping it.
+                UnityEngine.Application.runInBackground = true;
+                _runInBackgroundForced = true;
+            }
+            Job job;
             while (_jobs.TryDequeue(out job)) {
                 try {
-                    job.Result = _evaluator.Eval(job.Code);
+                    job.Result = job.Work() ?? "";
                 } catch (Exception e) {
                     job.Result = "[host error] " + e + "\n";
                 }
                 job.Done.Set();
             }
+        }
+
+        /// <summary>Run <paramref name="work"/> on the main thread (next Pump) and block for its result.</summary>
+        private string OnMainThread(Func<string> work, int timeoutSeconds = 30) {
+            var job = new Job { Work = work };
+            _jobs.Enqueue(job);
+            if (!job.Done.Wait(TimeSpan.FromSeconds(timeoutSeconds))) {
+                return "[timeout] main thread did not run the job within " + timeoutSeconds + "s (frozen / not pumping?)\n";
+            }
+            return job.Result;
         }
 
         // Runs on the HTTP thread.
@@ -90,12 +108,24 @@ namespace TangledeepAccess.Dev {
                 if (string.IsNullOrWhiteSpace(body)) {
                     return "[empty] POST C# source as the request body\n";
                 }
-                var job = new EvalJob { Code = body };
-                _jobs.Enqueue(job);
-                if (!job.Done.Wait(TimeSpan.FromSeconds(30))) {
-                    return "[timeout] eval did not run within 30s (is the game frozen / not pumping?)\n";
-                }
-                return job.Result;
+                return OnMainThread(() => _evaluator.Eval(body));
+            }
+
+            if (route == "/gui/game" && method == "GET") {
+                return OnMainThread(() => GuiInspector.DumpGameUi());
+            }
+
+            if (route == "/gui/mod" && method == "GET") {
+                return OnMainThread(() => GuiInspector.DumpModUi());
+            }
+
+            if (route == "/input" && method == "POST") {
+                string verb = (body ?? "").Trim();
+                return OnMainThread(() => InputInjector.Inject(verb));
+            }
+
+            if (route == "/screenshot" && method == "GET") {
+                return Screenshot();
             }
 
             if (route == "/speech" && method == "GET") {
@@ -115,6 +145,41 @@ namespace TangledeepAccess.Dev {
             }
 
             return "[404] " + method + " " + route + "\n";
+        }
+
+        // Trigger a screenshot on the main thread, then wait (on this HTTP thread) for the PNG,
+        // which ScreenCapture writes asynchronously over the next frame(s). Returns the path,
+        // which the driver then reads to view the frame.
+        private string Screenshot() {
+            string path = Path.Combine(Path.GetTempPath(), "td_shot.png");
+            OnMainThread(() => {
+                try {
+                    if (File.Exists(path)) {
+                        File.Delete(path);
+                    }
+                } catch {
+                }
+                UnityEngine.ScreenCapture.CaptureScreenshot(path);
+                return "requested";
+            });
+
+            var timer = System.Diagnostics.Stopwatch.StartNew();
+            while (timer.Elapsed.TotalSeconds < 8) {
+                try {
+                    if (File.Exists(path)) {
+                        long size = new FileInfo(path).Length;
+                        if (size > 0) {
+                            Thread.Sleep(60); // let the write settle, then confirm size is stable
+                            if (new FileInfo(path).Length == size) {
+                                return path + "\n";
+                            }
+                        }
+                    }
+                } catch {
+                }
+                Thread.Sleep(50);
+            }
+            return "[timeout] screenshot not written within 8s\n";
         }
     }
 }

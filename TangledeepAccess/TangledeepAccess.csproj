@@ -88,6 +88,17 @@
             <HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath>
             <Private>false</Private>
         </Reference>
+        <!-- Canvas lives here (UnityEngine.UI.dll is only the UI components like Text/Button).
+             The dev GUI inspector walks active Canvases to dump the live UI hierarchy. -->
+        <Reference Include="UnityEngine.UIModule">
+            <HintPath>$(Managed)\UnityEngine.UIModule.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <!-- ScreenCapture (the /screenshot endpoint) lives in its own module. -->
+        <Reference Include="UnityEngine.ScreenCaptureModule">
+            <HintPath>$(Managed)\UnityEngine.ScreenCaptureModule.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
         <!-- Legacy UnityEngine.Input (GetKeyDown/KeyCode) lives in its own module in
              Unity 2020; the mod reads raw arrows/enter for its own key handling. -->
         <Reference Include="UnityEngine.InputLegacyModule">

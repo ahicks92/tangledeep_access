@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using TangledeepAccess.Speech;
 using TangledeepAccess.Ui.Graph;
 
@@ -81,6 +82,59 @@ namespace TangledeepAccess.Ui {
             }
 
             return BuildAndProcess(result.Overlay, gameFocus, command);
+        }
+
+        /// <summary>
+        /// Dev-introspection: describe the currently active overlay as the mod sees it — the
+        /// built graph's nodes with their spoken labels, the current cursor, and the directional
+        /// links. Read-only (builds a throwaway render; does not disturb the live cache). Must run
+        /// on the main thread, since node labels read live game state.
+        /// </summary>
+        internal string Describe() {
+            OverlayResult result = FindActive();
+            if (result == null || result.Kind == OverlayResultKind.Inactive) {
+                return "overlay: none\n";
+            }
+            if (result.Kind == OverlayResultKind.Sleeping) {
+                return "overlay: " + result.Id + " (sleeping - not rendering yet)\n";
+            }
+
+            var ctx = new OverlayCtx(new MessageBuilder(), Modifiers.None);
+            GraphRender render = BuildRender(result.Overlay, ctx);
+
+            GraphState state;
+            _cache.TryGetValue(result.Overlay.Id, out state);
+            ControlId current = state != null && state.CurKey != null ? state.CurKey : render.StartKey;
+
+            var labels = new Dictionary<ControlId, string>();
+            foreach (KeyValuePair<ControlId, GraphNode> kv in render.Nodes) {
+                labels[kv.Key] = NodeLabel(kv.Value);
+            }
+
+            var sb = new StringBuilder();
+            sb.Append("overlay: ").Append(result.Id)
+                .Append(" (nodes=").Append(render.Nodes.Count)
+                .Append(", capturesInput=").Append(render.Nodes.Count > 1).Append(")\n");
+            foreach (KeyValuePair<ControlId, GraphNode> kv in render.Nodes) {
+                bool isCurrent = current != null && current.Equals(kv.Key);
+                sb.Append(isCurrent ? "> " : "  ").Append('"').Append(labels[kv.Key] ?? "").Append('"');
+                foreach (KeyValuePair<GraphDir, Transition> tr in kv.Value.Transitions) {
+                    string destLabel;
+                    labels.TryGetValue(tr.Value.Destination, out destLabel);
+                    sb.Append("  ").Append(tr.Key).Append("->\"").Append(destLabel ?? "?").Append('"');
+                }
+                sb.Append('\n');
+            }
+            return sb.ToString();
+        }
+
+        private static string NodeLabel(GraphNode node) {
+            if (node == null || node.Vtable == null || node.Vtable.Label == null) {
+                return null;
+            }
+            var message = new MessageBuilder();
+            node.Vtable.Label(new OverlayCtx(message, Modifiers.None));
+            return message.Build();
         }
 
         private OverlayResult FindActive() {
