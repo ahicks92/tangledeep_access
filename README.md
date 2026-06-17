@@ -25,6 +25,8 @@ line-of-sight scan. See **Features** and **Controls** below; architecture notes 
   they happen, filtered by the game's own line-of-sight and verbose-log settings.
 - **Movement feedback.** Stepping onto a tile with an item or non-ground terrain announces
   it automatically; plain empty ground stays silent, so walking is not chatty.
+- **Health warnings.** Crossing below half health, then a quarter, is announced (and re-armed
+  on recovery) — important in a permadeath game.
 - **Full-screen panels.** Inventory, equipment, skills, and the character sheet speak the
   selected item/ability — its name as you navigate, then its full tooltip (cost, cooldown,
   effects). Navigate with the game's own keys.

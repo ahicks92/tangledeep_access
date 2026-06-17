@@ -150,6 +150,13 @@ namespace TangledeepAccess {
             if (!string.IsNullOrEmpty(stepped)) {
                 _speech?.Speak(stepped, interrupt: false);
             }
+
+            // Low/critical health warning. Interrupts — survival in a permadeath game trumps
+            // whatever else is queued.
+            string health = HealthWatcher.Poll();
+            if (!string.IsNullOrEmpty(health)) {
+                _speech?.Speak(health);
+            }
         }
     }
 }
