@@ -23,6 +23,8 @@ line-of-sight scan. See **Features** and **Controls** below; architecture notes 
   new name) are all readable.
 - **Turn-by-turn game log.** Combat, status changes, pickups, and NPC barks are spoken as
   they happen, filtered by the game's own line-of-sight and verbose-log settings.
+- **Movement feedback.** Stepping onto a tile with an item or non-ground terrain announces
+  it automatically; plain empty ground stays silent, so walking is not chatty.
 - **Tile reading and a scanner.** On demand, read the hero's tile or sweep everything in
   line of sight by direction and distance (see Controls).
 

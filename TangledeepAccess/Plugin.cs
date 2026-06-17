@@ -126,6 +126,13 @@ namespace TangledeepAccess {
             if (!string.IsNullOrEmpty(log)) {
                 _speech?.Speak(log, interrupt: false);
             }
+
+            // Notable contents of a tile the hero just stepped onto (items, hazardous terrain).
+            // Queued, not interrupting, so it follows the turn's log lines.
+            string stepped = MovementWatcher.PollOnMove();
+            if (!string.IsNullOrEmpty(stepped)) {
+                _speech?.Speak(stepped, interrupt: false);
+            }
         }
     }
 }
