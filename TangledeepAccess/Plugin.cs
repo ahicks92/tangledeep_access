@@ -30,6 +30,10 @@ namespace TangledeepAccess {
         private OverlayDispatcher _dispatcher;
         private readonly DevServer _devServer = new DevServer();
 
+        // One-time spoken "ready" line, deferred a few frames so Prism's backend is up before
+        // the first call (speaking from Awake can precede backend init). -1 once spoken.
+        private int _startupFrames = 30;
+
         private void Awake() {
             LogBepInExBackend.Install(Logger);
             Log.Info(PluginName + " " + PluginVersion + " loading");
@@ -82,6 +86,13 @@ namespace TangledeepAccess {
         private void Update() {
             // Run any queued dev eval jobs on the main thread (no-op when disabled).
             _devServer.Pump();
+
+            // Speak a one-time "ready" line once the backend has had a few frames to come up,
+            // so the player knows the mod is active and how to discover its commands.
+            if (_startupFrames >= 0 && --_startupFrames < 0) {
+                _speech?.Speak(PluginName + " " + PluginVersion
+                    + " ready. Press slash for a list of commands.");
+            }
 
             // Single per-frame pump. The input hook (TDInputHandler prefix) stashes a nav
             // command; we apply it through the dispatcher, then carry out the game-side

@@ -104,8 +104,9 @@ dotnet format TangledeepAccess.sln
 All three scripts auto-locate the Steam install of Tangledeep; override with the
 `TANGLEDEEP_GAME` environment variable.
 
-Then launch Tangledeep. With a screen reader running you should hear
-"Tangledeep Access \<version\> loaded. Hello world." within a couple seconds.
+Then launch Tangledeep (or use `.\run-game.ps1 -Speech`). With a screen reader running you
+should hear "Tangledeep Access \<version\> ready. Press slash for a list of commands."
+within a couple seconds, then the title menu as you navigate it.
 
 ## Logs
 
