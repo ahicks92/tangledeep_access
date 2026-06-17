@@ -33,11 +33,19 @@ namespace TangledeepAccess {
             LogBepInExBackend.Install(Logger);
             Log.Info(PluginName + " " + PluginVersion + " loading");
 
-            // Native preload + Prism init are pure native work (no Unity state), safe here.
-            string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            if (NativeLoader.LoadPrism(pluginDir)) {
-                _speech = new PrismSpeech();
-                _speech.Initialize();
+            // The speech wrapper always exists so the dev /speech tap fires; Prism (and the
+            // NVDA controller it statically links) is loaded only when speech is enabled.
+            // Disable it for headless/overnight dev runs with no screen reader, where a flaky
+            // or absent NVDA must not hang or corrupt anything: TANGLEDEEP_NO_SPEECH=1.
+            _speech = new PrismSpeech();
+            if (Environment.GetEnvironmentVariable("TANGLEDEEP_NO_SPEECH") == "1") {
+                Log.Info("Speech disabled (TANGLEDEEP_NO_SPEECH=1): Prism not loaded; spoken text still captured for /speech");
+            } else {
+                // Native preload + Prism init are pure native work (no Unity state), safe here.
+                string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                if (NativeLoader.LoadPrism(pluginDir)) {
+                    _speech.Initialize();
+                }
             }
 
             // Build the overlay system. Handlers are registered bottom-up: the generic

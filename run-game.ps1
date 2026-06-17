@@ -6,12 +6,15 @@
 # "restart" is just "cancel the background task and run this again".
 
 param(
+    [switch]$Speech,
     [switch]$Help
 )
 
 if ($Help) {
-    Write-Host "Usage: .\run-game.ps1 [-Help]"
+    Write-Host "Usage: .\run-game.ps1 [-Speech] [-Help]"
     Write-Host "  Launches Tangledeep and blocks until it exits. Run as a background task."
+    Write-Host "  Prism/NVDA speech is OFF by default (headless/overnight-safe); spoken text is"
+    Write-Host "  still captured for the dev /speech endpoint. Pass -Speech to voice via NVDA."
     exit 0
 }
 
@@ -56,8 +59,19 @@ Get-Process -Name Tangledeep -ErrorAction SilentlyContinue | ForEach-Object {
 # by the child process; absent in a normal play launch so no socket is opened.
 $env:TANGLEDEEP_DEV = "1"
 
+# Default: do NOT load Prism/NVDA, so headless/overnight runs (no screen reader) are robust
+# - a flaky or absent NVDA can't hang or corrupt anything. Spoken text is still captured at
+# the tap for the /speech endpoint. Pass -Speech to voice through NVDA instead.
+if ($Speech) {
+    Remove-Item Env:\TANGLEDEEP_NO_SPEECH -ErrorAction SilentlyContinue
+    $speechNote = "speech: NVDA"
+} else {
+    $env:TANGLEDEEP_NO_SPEECH = "1"
+    $speechNote = "speech: off (captured for /speech)"
+}
+
 $proc = Start-Process -FilePath $Exe -WorkingDirectory $Game -PassThru
-Write-Host "Launched Tangledeep (PID $($proc.Id)), dev server on http://127.0.0.1:8770. Blocking until it exits..." -ForegroundColor Cyan
+Write-Host "Launched Tangledeep (PID $($proc.Id)), dev server on http://127.0.0.1:8770, $speechNote. Blocking until it exits..." -ForegroundColor Cyan
 
 try {
     $proc.WaitForExit()

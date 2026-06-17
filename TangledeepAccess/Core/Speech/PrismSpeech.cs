@@ -87,11 +87,17 @@ namespace TangledeepAccess.Speech {
         /// unavailable. <paramref name="interrupt"/> cuts off current speech.
         /// </summary>
         public void Speak(string text, bool interrupt = true) {
-            if (!Available || string.IsNullOrEmpty(text)) {
+            if (string.IsNullOrEmpty(text)) {
                 return;
             }
 
+            // Capture for the dev /speech tap BEFORE the availability gate, so the driver can
+            // read spoken text even when Prism is disabled (headless/overnight, no NVDA).
             Observer?.Invoke(text);
+
+            if (!Available) {
+                return;
+            }
 
             var err = PrismNative.prism_backend_output(
                 _backend,

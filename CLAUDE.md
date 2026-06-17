@@ -59,6 +59,9 @@ A logged failure is actionable; a silent one is invisible.
   background task: a crash/quit then wakes you with the exit code). Sets `TANGLEDEEP_DEV=1`
   to enable the dev driver (below). Relaunch to restart (it kills any leftover instance
   first). **Kill the game before `build.ps1`** — a running game locks the deployed plugin DLL.
+  **Prism/NVDA is OFF by default** (`TANGLEDEEP_NO_SPEECH=1`) so headless/overnight runs don't
+  depend on a screen reader; spoken text is still captured for `/speech`. Pass `-Speech` to
+  voice through NVDA.
 - All scripts auto-locate the Steam install; override with `TANGLEDEEP_GAME`.
 - `<Version>` lives in `Directory.Build.props` (single source of truth; the plugin's
   `BepInPlugin` literal is generated from it). `LangVersion` 7.3 (safe for Unity Mono).
@@ -113,7 +116,8 @@ Endpoints (loopback; drive with `curl`):
   members of the mod/game — reach `internal`/`private` via reflection
   (`typeof(TangledeepAccess.Plugin).Assembly.GetType("...")` then `GetField(..., NonPublic)`).
 - `GET /speech?since=N` — strings the mod has spoken, with a monotonic cursor; poll
-  incrementally. This is how you observe the TTS you can't hear.
+  incrementally. This is how you observe the TTS you can't hear. The tap is upstream of the
+  Prism backend, so it works even with speech disabled (the overnight default).
 - `GET /gui/game` — **raw** structural dump of the active UI hierarchy (full paths, every
   component type, raw widget text) + key `UIManagerScript` state. Deliberately NOT the
   mod's cleaned-label view: it surfaces structure the cleaned view hides (e.g. the
