@@ -206,7 +206,11 @@ namespace TangledeepAccess.Ui {
                 return ApplyNav(graph, state, ctx, message, command.Value);
             }
 
-            return Follow(graph, state, ctx, message, gameFocus, announced);
+            // An overlay that captures input drives its own focus (its start node, then our nav),
+            // so it must not chase the game's focus — otherwise a freshly-opened owned screen
+            // jumps off its start (e.g. a dialog's body node) onto whatever button the game
+            // happens to have focused. Only passive overlays follow the game's focus.
+            return Follow(graph, state, ctx, message, WantsInputCapture ? null : gameFocus, announced);
         }
 
         private TickResult ApplyNav(

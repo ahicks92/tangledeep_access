@@ -56,21 +56,22 @@ namespace TangledeepAccess {
             // Build the overlay system. Handlers are registered bottom-up: the generic
             // game-focus fallback first (lowest priority), richer menu overlays later.
             _dispatcher = new OverlayDispatcher();
-            // Priority is reverse registration order (last registered wins). Low to high:
-            // generic fallback < modal dialog < character creation < save-slot. Dialog is modal
-            // so it sits above the generic mirror; CharCreation sits above Dialog because two of
-            // its screens (the job grid lives outside dialogs, but feat select is a dialog box)
-            // need bespoke reading, yet it claims only its own stages (job grid / feat select /
-            // name entry), ceding the narrative-intro dialogs to Dialog; SaveSlot sits highest
-            // because the save-slot screen is itself a dialog box wanting the bespoke slot
-            // reader, and likewise only claims its exact stage.
+            // One overlay per screen. Priority is reverse registration order (last wins). The
+            // generic mirror is the floor; in-game dialogue sits above it. TitleDialogOverlay is
+            // the catch-all for title dialogs, so the screen-specific title overlays (main menu,
+            // feat select, save slots) are registered ABOVE it and win on their own screens. The
+            // creation screens that are not dialogs (job grid, name entry, begin) claim distinct
+            // stages and never collide. SaveSlot stays highest (its screen is a dialog box but
+            // wants the bespoke slot reader).
             _dispatcher.Register(new GenericGameFocusOverlay().Handler);
-            _dispatcher.Register(new DialogOverlay().Handler);
-            // Above Dialog: the title main menu is a dialog box too, but it is its own screen
-            // (claimed by the TITLESCREEN stage), so it outranks the generic dialog handler.
-            _dispatcher.Register(new TitleMenuOverlay().Handler);
-            _dispatcher.Register(new CharCreationOverlay().Handler);
-            _dispatcher.Register(new SaveSlotOverlay().Handler);
+            _dispatcher.Register(new DialogOverlay().Handler);          // in-game NPC dialogue
+            _dispatcher.Register(new TitleDialogOverlay().Handler);     // title narrative dialogs (catch-all)
+            _dispatcher.Register(new TitleMenuOverlay().Handler);       // TITLESCREEN menu
+            _dispatcher.Register(new FeatSelectOverlay().Handler);      // PERKSELECT dialog
+            _dispatcher.Register(new JobGridOverlay().Handler);         // JOBSELECT grid
+            _dispatcher.Register(new NameEntryOverlay().Handler);       // NAMEINPUT, deciding
+            _dispatcher.Register(new BeginScreenOverlay().Handler);     // NAMEINPUT, ready
+            _dispatcher.Register(new SaveSlotOverlay().Handler);        // SELECTSLOT
             UiRuntime.Dispatcher = _dispatcher;
 
             try {

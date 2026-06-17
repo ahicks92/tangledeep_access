@@ -17,7 +17,13 @@ namespace TangledeepAccess.Ui {
         // Game menus (mirror Tangledeep). Add as their overlays are implemented.
         TitleMenu,
         SaveSlot,
-        CharCreation,
+        // The new-game flow, one id per screen so each overlay has its own focus cache that
+        // resets cleanly when the player moves between screens.
+        JobGrid,
+        FeatSelect,
+        NameEntry,
+        BeginScreen,
+        TitleDialog,
         Dialog,
         Inventory,
         Equipment,

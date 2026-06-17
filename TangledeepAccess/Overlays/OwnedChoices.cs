@@ -4,43 +4,51 @@ using TangledeepAccess.Ui.Graph;
 
 namespace TangledeepAccess.Overlays {
     /// <summary>
-    /// Builds an owned virtual control for a title-screen dialog box from its own buttons
-    /// (<c>UIManagerScript.dialogUIObjects</c>) — never from the briefly-stale
-    /// <c>uiObjectFocus</c>, whose neighbors would leak in. One node per button; the optional
-    /// <paramref name="body"/> (a narrative dialog's text) is folded into each label so the
-    /// label is the control's whole spoken content and the framework re-reads it on navigation.
-    /// The node carries the button reference so Enter drives the game's own CursorConfirm, and
-    /// the overlay claims input (the title hook then owns navigation). Shared by every owned
-    /// title dialog (the main menu reads buttons only; narrative dialogs fold in the body).
+    /// Unravels a title-screen dialog box into an owned vertical menu and captures input, so we
+    /// navigate it the same way regardless of how the game keys that particular dialog.
+    ///
+    /// <para>The dialog's <paramref name="body"/> text (if any) becomes its own <b>fake control</b>
+    /// — a synthetic, read-only node with no game backing — placed first, rather than being folded
+    /// into every choice's label. Each real button (from <c>dialogUIObjects</c>, never the
+    /// briefly-stale <c>uiObjectFocus</c>) follows as its own node carrying its <c>UIObject</c>
+    /// reference, so Enter drives the game's own CursorConfirm on the right choice. The result is a
+    /// clean list — "story text", then "Continue"; or "Delete save?", then "Yes", "No" — with no
+    /// instruction repeated on each item. The body node is read on appearance (it is the start)
+    /// and re-readable by navigating to it.</para>
+    ///
+    /// Used by the title menu (no body → buttons only) and the narrative title dialogs (body +
+    /// choices).
     /// </summary>
     internal static class OwnedChoices {
         public static void Build(IOverlayBuilder builder, string body) {
-            System.Collections.Generic.List<UIManagerScript.UIObject> choices =
-                UIManagerScript.dialogUIObjects;
-            if (choices == null) {
-                return;
+            if (!string.IsNullOrEmpty(body)) {
+                // Fake read-only control: navigable and re-readable, but a no-op on activate so it
+                // never confirms a default (important for a yes/no prompt). Keyed on the text so a
+                // new page is a new node.
+                builder.AddClickable(
+                    ControlId.Structural("dlgbody:" + body),
+                    ctx => ctx.Message.Fragment(body),
+                    (ctx, mods) => { }
+                );
             }
 
-            for (int i = 0; i < choices.Count; i++) {
-                UIManagerScript.UIObject captured = choices[i];
-                // Key on (index, body): same content → same identity (read once); a new page
-                // (changed body) → a new identity the framework re-reads. body is "" for the menu.
-                ControlId id = ControlId.Referenced(captured, "dialog:" + i + ":" + (body ?? ""));
-                builder.AddItem(
-                    id,
-                    new NodeVtable {
-                        Label = ctx => {
-                            if (!string.IsNullOrEmpty(body)) {
-                                ctx.Message.Fragment(body);
-                            }
-
-                            string label = GameLabelReader.ReadLabel(captured);
-                            if (!string.IsNullOrEmpty(label)) {
-                                ctx.Message.Fragment(label);
-                            }
-                        },
-                    }
-                );
+            System.Collections.Generic.List<UIManagerScript.UIObject> choices =
+                UIManagerScript.dialogUIObjects;
+            if (choices != null) {
+                for (int i = 0; i < choices.Count; i++) {
+                    UIManagerScript.UIObject captured = choices[i];
+                    builder.AddItem(
+                        ControlId.Referenced(captured, "dlgchoice:" + i),
+                        new NodeVtable {
+                            Label = ctx => {
+                                string label = GameLabelReader.ReadLabel(captured);
+                                if (!string.IsNullOrEmpty(label)) {
+                                    ctx.Message.Fragment(label);
+                                }
+                            },
+                        }
+                    );
+                }
             }
 
             builder.CaptureInput();
