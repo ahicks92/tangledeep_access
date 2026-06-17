@@ -32,17 +32,22 @@ namespace TangledeepAccess.Overlays {
 
         public void Build(IOverlayBuilder builder) {
             string body = ReadBody();
+
+            if (IsTitleFlow()) {
+                // Title-flow dialogs: own them as a real virtual control (body in the label).
+                BuildOwnedChoices(builder, body);
+                return;
+            }
+
+            // In-game dialogue: the game drives navigation, so passively mirror and follow its
+            // focus, with the body on the one-shot announcement channel.
             if (body != null) {
                 // Key by the text: a new/changed message re-announces; the same message,
                 // re-rendered every tick, announces only once.
                 builder.Announce(body, ctx => ctx.Message.Fragment(body));
             }
 
-            if (IsTitleFlow()) {
-                BuildOwnedChoices(builder);
-            } else if (UIManagerScript.uiObjectFocus != null) {
-                // In-game dialogue: the choices are legacy UIObjects in the neighbor graph and
-                // the game drives navigation, so we passively mirror and follow its focus.
+            if (UIManagerScript.uiObjectFocus != null) {
                 GameMenuMirror.Build(builder, GameLabelReader.ReadLabel);
             } else if (body != null) {
                 // Silent placeholder so the announcement (which needs a node) can ride along
@@ -56,23 +61,36 @@ namespace TangledeepAccess.Overlays {
         /// <c>TitleScreenScript.Update</c>, not the in-game input chokepoint, so we own their
         /// input via the title hook. Build one node per actual dialog button straight from
         /// <c>dialogUIObjects</c> — never from the (briefly stale) <c>uiObjectFocus</c>, whose
-        /// title-menu neighbors would otherwise leak in and get spoken — and claim input. The
-        /// body rides the announcement; each button is a node, so a single-Continue dialog is
-        /// one node ("body. Continue") and Enter passes the confirm through to the game.
+        /// title-menu neighbors would otherwise leak in and get spoken — and claim input.
+        ///
+        /// <para>Each node's label is the control's whole spoken content: the dialog body
+        /// followed by that button's text. So a single-Continue intro is one node,
+        /// "&lt;body&gt;. Continue", and the body is re-read whenever focus lands on it (a nav
+        /// key-press, or the next page). The structural key folds in the body, so a new page is
+        /// a new identity the framework re-reads; the button reference drives Enter through the
+        /// game's own CursorConfirm. No announcement channel — the label is the content, which
+        /// is what makes this a real virtual control rather than a side-channel.</para>
         /// </summary>
-        private static void BuildOwnedChoices(IOverlayBuilder builder) {
+        private static void BuildOwnedChoices(IOverlayBuilder builder, string body) {
             System.Collections.Generic.List<UIManagerScript.UIObject> choices =
                 UIManagerScript.dialogUIObjects;
             if (choices == null) {
                 return;
             }
 
-            foreach (UIManagerScript.UIObject choice in choices) {
-                UIManagerScript.UIObject captured = choice;
+            for (int i = 0; i < choices.Count; i++) {
+                UIManagerScript.UIObject captured = choices[i];
+                // Key on (index, body): same page → same identity (read once); a new page
+                // (changed body) → a new identity the framework re-reads.
+                ControlId id = ControlId.Referenced(captured, "dialog:" + i + ":" + (body ?? ""));
                 builder.AddItem(
-                    ControlId.ForObject(choice),
+                    id,
                     new NodeVtable {
                         Label = ctx => {
+                            if (!string.IsNullOrEmpty(body)) {
+                                ctx.Message.Fragment(body);
+                            }
+
                             string label = GameLabelReader.ReadLabel(captured);
                             if (!string.IsNullOrEmpty(label)) {
                                 ctx.Message.Fragment(label);
