@@ -119,6 +119,13 @@ namespace TangledeepAccess {
                 }
             }
 
+            // Selection in a full-screen panel (inventory/equipment/skills/char sheet), captured
+            // from the ImpactUI column hook. Menu navigation, so it interrupts for responsiveness.
+            string panel = PanelReader.Consume();
+            if (!string.IsNullOrEmpty(panel)) {
+                _speech?.Speak(panel);
+            }
+
             // Spontaneous game-log events (combat, status, NPC barks) the Harmony hook buffered
             // this frame. Spoken without interrupting so a multi-event turn is not chopped, and
             // after any overlay speech above so menu navigation stays responsive.
