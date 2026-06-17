@@ -34,8 +34,10 @@ namespace TangledeepAccess.Overlays {
             string body = ReadBody();
 
             if (IsTitleFlow()) {
-                // Title-flow dialogs: own them as a real virtual control (body in the label).
-                BuildOwnedChoices(builder, body);
+                // Narrative title dialogs (story intros, prompts): own them as a virtual control,
+                // body folded into each node's label. The main menu is a separate overlay
+                // (TitleMenuOverlay) that outranks us, so we never build it here.
+                OwnedChoices.Build(builder, body);
                 return;
             }
 
@@ -54,53 +56,6 @@ namespace TangledeepAccess.Overlays {
                 // when the game has not focused a button yet.
                 builder.AddLabel(ControlId.Structural("dialogbody"), ctx => { });
             }
-        }
-
-        /// <summary>
-        /// Title-screen dialogs (the new-game story intros, etc.) are pumped by
-        /// <c>TitleScreenScript.Update</c>, not the in-game input chokepoint, so we own their
-        /// input via the title hook. Build one node per actual dialog button straight from
-        /// <c>dialogUIObjects</c> — never from the (briefly stale) <c>uiObjectFocus</c>, whose
-        /// title-menu neighbors would otherwise leak in and get spoken — and claim input.
-        ///
-        /// <para>Each node's label is the control's whole spoken content: the dialog body
-        /// followed by that button's text. So a single-Continue intro is one node,
-        /// "&lt;body&gt;. Continue", and the body is re-read whenever focus lands on it (a nav
-        /// key-press, or the next page). The structural key folds in the body, so a new page is
-        /// a new identity the framework re-reads; the button reference drives Enter through the
-        /// game's own CursorConfirm. No announcement channel — the label is the content, which
-        /// is what makes this a real virtual control rather than a side-channel.</para>
-        /// </summary>
-        private static void BuildOwnedChoices(IOverlayBuilder builder, string body) {
-            System.Collections.Generic.List<UIManagerScript.UIObject> choices =
-                UIManagerScript.dialogUIObjects;
-            if (choices == null) {
-                return;
-            }
-
-            for (int i = 0; i < choices.Count; i++) {
-                UIManagerScript.UIObject captured = choices[i];
-                // Key on (index, body): same page → same identity (read once); a new page
-                // (changed body) → a new identity the framework re-reads.
-                ControlId id = ControlId.Referenced(captured, "dialog:" + i + ":" + (body ?? ""));
-                builder.AddItem(
-                    id,
-                    new NodeVtable {
-                        Label = ctx => {
-                            if (!string.IsNullOrEmpty(body)) {
-                                ctx.Message.Fragment(body);
-                            }
-
-                            string label = GameLabelReader.ReadLabel(captured);
-                            if (!string.IsNullOrEmpty(label)) {
-                                ctx.Message.Fragment(label);
-                            }
-                        },
-                    }
-                );
-            }
-
-            builder.CaptureInput();
         }
 
         private static bool IsTitleFlow() {

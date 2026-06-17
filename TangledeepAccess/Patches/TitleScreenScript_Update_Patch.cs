@@ -26,12 +26,15 @@ namespace TangledeepAccess.Patches {
             }
 
             NavCommand? command = MenuInput.ReadNavKey();
-            if (!command.HasValue) {
-                return true; // not a key we handle — let the title pump run (animation, etc.)
+            if (command.HasValue) {
+                UiRuntime.SetPendingNav(command.Value);
+                return false; // our overlay owns it; suppress the title's input this frame
             }
 
-            UiRuntime.SetPendingNav(command.Value);
-            return false; // our overlay owns it; suppress the title's input this frame
+            // No key-down this frame, but if a nav key is still held, keep suppressing so the
+            // game's own repeat can't move focus alongside us (a doubled step). Only a frame with
+            // no relevant key held falls through to the title pump (animation, etc.).
+            return !MenuInput.AnyNavKeyHeld();
         }
     }
 }

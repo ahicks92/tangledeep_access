@@ -32,5 +32,19 @@ namespace TangledeepAccess.Patches {
 
             return null;
         }
+
+        /// <summary>
+        /// True while any nav/confirm key is held (not just the key-down frame). An owning hook
+        /// suppresses the game's pump on these frames too, so a held key cannot leak through on
+        /// its repeat frames and let the game move focus alongside us (a doubled step).
+        /// </summary>
+        public static bool AnyNavKeyHeld() {
+            return Input.GetKey(KeyCode.UpArrow)
+                || Input.GetKey(KeyCode.DownArrow)
+                || Input.GetKey(KeyCode.LeftArrow)
+                || Input.GetKey(KeyCode.RightArrow)
+                || Input.GetKey(KeyCode.Return)
+                || Input.GetKey(KeyCode.KeypadEnter);
+        }
     }
 }

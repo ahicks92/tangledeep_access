@@ -66,6 +66,9 @@ namespace TangledeepAccess {
             // reader, and likewise only claims its exact stage.
             _dispatcher.Register(new GenericGameFocusOverlay().Handler);
             _dispatcher.Register(new DialogOverlay().Handler);
+            // Above Dialog: the title main menu is a dialog box too, but it is its own screen
+            // (claimed by the TITLESCREEN stage), so it outranks the generic dialog handler.
+            _dispatcher.Register(new TitleMenuOverlay().Handler);
             _dispatcher.Register(new CharCreationOverlay().Handler);
             _dispatcher.Register(new SaveSlotOverlay().Handler);
             UiRuntime.Dispatcher = _dispatcher;
