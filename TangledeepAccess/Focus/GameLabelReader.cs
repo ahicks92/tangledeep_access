@@ -33,7 +33,16 @@ namespace TangledeepAccess.Focus
             if (string.IsNullOrEmpty(raw))
                 return null;
 
-            return CustomAlgorithms.StripColors(raw).Trim();
+            return Clean(raw);
+        }
+
+        /// <summary>Strip TMP color/markup tags and trim; null/empty in returns null.</summary>
+        public static string Clean(string raw)
+        {
+            if (string.IsNullOrEmpty(raw))
+                return null;
+            string cleaned = CustomAlgorithms.StripColors(raw).Trim();
+            return string.IsNullOrEmpty(cleaned) ? null : cleaned;
         }
     }
 }

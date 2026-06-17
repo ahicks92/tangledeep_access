@@ -46,6 +46,7 @@ namespace TangledeepAccess
             // game-focus fallback first (lowest priority), richer menu overlays later.
             _dispatcher = new OverlayDispatcher();
             _dispatcher.Register(new GenericGameFocusOverlay().Handler);
+            _dispatcher.Register(new SaveSlotOverlay().Handler); // higher priority than generic
             UiRuntime.Dispatcher = _dispatcher;
 
             try

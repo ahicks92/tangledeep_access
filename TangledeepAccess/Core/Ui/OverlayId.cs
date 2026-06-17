@@ -18,6 +18,7 @@ namespace TangledeepAccess.Ui
 
         // Game menus (mirror Tangledeep). Add as their overlays are implemented.
         TitleMenu,
+        SaveSlot,
         CharCreation,
         Dialog,
         Inventory,
