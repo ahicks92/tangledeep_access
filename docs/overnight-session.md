@@ -23,7 +23,7 @@ title screen into gameplay:
     `;` look cursor (8-directional via arrows + numpad, Home re-centers, LOS-respecting),
     `'` repeat last phrase.
   - Stepping onto an item or hazardous terrain is announced automatically (plain ground is
-    silent).
+    silent); crossing below half / a quarter health is warned.
 - **Full-screen panels** (inventory/equipment/skills/character sheet) speak the selected
   item/ability name + full tooltip, via a hook on the ImpactUI column model.
 - **Ranged targeting** reads the target tile (contents, direction/distance, valid/invalid)
@@ -46,12 +46,19 @@ title screen into gameplay:
 The dev endpoints (`/eval`, `/speech`, `/gui/*`, `/screenshot`, `/input`) are unchanged
 this session and documented in `CLAUDE.md`.
 
+## Verified end to end
+
+Drove the hero down the stairs to **Path to Tangledeep 1F** and fought a Moss Jelly:
+the scanner flagged it "(hostile) 1 east", and the fight read fully via the game log —
+"Mirai chops Moss Jelly for 31 damage!", "Moss Jelly pulverizes Mirai for 12 damage!",
+"Moss Jelly is defeated! Gained 6 XP, 12 JP, and 19g!". Movement, bidirectional combat,
+kills, and rewards all speak. Low/critical **health warnings** were added and verified.
+Tangledeep is playable by ear through actual combat.
+
 ## Known gaps / next (in rough priority)
 
-- **Combat** not exercised yet (no monsters in the safe town). The pieces are in place —
-  the game log speaks attacks (LOS-filtered), the scanner flags hostiles, targeting reads —
-  but a real fight (descend stairs to floor 1) should be played through to confirm.
 - **Inventory item actions** (use/equip/drop from the panel) not verified end to end.
+- Deeper-floor hazards (traps, status terrain) read as coarse tile types only.
 - **Custom name typing** in creation is deferred (default + RANDOM suffice).
 - Terrain is the coarse tile type ("ground"/"water"/"wall").
 
