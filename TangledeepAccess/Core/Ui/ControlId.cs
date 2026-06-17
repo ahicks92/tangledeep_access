@@ -1,7 +1,6 @@
 using System;
 
-namespace TangledeepAccess.Ui
-{
+namespace TangledeepAccess.Ui {
     /// <summary>
     /// The identity of a control (graph node). Replaces Factorio Access's plain string
     /// node key with a two-tier identity so focus can be followed across rebuilds even
@@ -22,31 +21,29 @@ namespace TangledeepAccess.Ui
     /// The reference tier is metadata, applied explicitly during focus reconciliation and
     /// game-focus sync via <see cref="ReferenceMatches"/>.</para>
     /// </summary>
-    public sealed class ControlId : IEquatable<ControlId>
-    {
+    public sealed class ControlId : IEquatable<ControlId> {
         /// <summary>The originating game/domain object, or null. Matched by reference identity.</summary>
         public object Reference { get; }
 
         /// <summary>The value-equatable structural identity. Never null.</summary>
         public object StructuralKey { get; }
 
-        private ControlId(object reference, object structuralKey)
-        {
-            if (structuralKey == null)
+        private ControlId(object reference, object structuralKey) {
+            if (structuralKey == null) {
                 throw new ArgumentNullException(nameof(structuralKey));
+            }
+
             Reference = reference;
             StructuralKey = structuralKey;
         }
 
         /// <summary>A control identified only by a structural key (no backing object).</summary>
-        public static ControlId Structural(object structuralKey)
-        {
+        public static ControlId Structural(object structuralKey) {
             return new ControlId(null, structuralKey);
         }
 
         /// <summary>A control with both tiers: a backing object and a structural key.</summary>
-        public static ControlId Referenced(object reference, object structuralKey)
-        {
+        public static ControlId Referenced(object reference, object structuralKey) {
             return new ControlId(reference, structuralKey);
         }
 
@@ -55,36 +52,32 @@ namespace TangledeepAccess.Ui
         /// structural key (so equality collapses to identity). Use this when no better
         /// structural key is available, e.g. wrapping a raw game widget.
         /// </summary>
-        public static ControlId ForObject(object reference)
-        {
-            if (reference == null)
+        public static ControlId ForObject(object reference) {
+            if (reference == null) {
                 throw new ArgumentNullException(nameof(reference));
+            }
+
             return new ControlId(reference, reference);
         }
 
         /// <summary>Tier-1 test: is <paramref name="obj"/> this control's backing object?</summary>
-        public bool ReferenceMatches(object obj)
-        {
+        public bool ReferenceMatches(object obj) {
             return Reference != null && ReferenceEquals(Reference, obj);
         }
 
-        public bool Equals(ControlId other)
-        {
+        public bool Equals(ControlId other) {
             return other != null && Equals(StructuralKey, other.StructuralKey);
         }
 
-        public override bool Equals(object obj)
-        {
+        public override bool Equals(object obj) {
             return Equals(obj as ControlId);
         }
 
-        public override int GetHashCode()
-        {
+        public override int GetHashCode() {
             return StructuralKey.GetHashCode();
         }
 
-        public override string ToString()
-        {
+        public override string ToString() {
             return Reference == null
                 ? "ControlId(" + StructuralKey + ")"
                 : "ControlId(" + StructuralKey + ", ref=" + Reference + ")";

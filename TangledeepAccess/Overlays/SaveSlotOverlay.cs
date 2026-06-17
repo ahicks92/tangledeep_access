@@ -4,8 +4,7 @@ using TangledeepAccess.Speech;
 using TangledeepAccess.Ui;
 using TMPro;
 
-namespace TangledeepAccess.Overlays
-{
+namespace TangledeepAccess.Overlays {
     /// <summary>
     /// Speaks the New Game / Load / Manage-Data save-slot screen. That screen does NOT use the
     /// usual uiObjectFocus/neighbor model for the slots — it has a custom cursor
@@ -20,8 +19,7 @@ namespace TangledeepAccess.Overlays
     /// field text, color-stripped. The only mod token is the bare slot number for empty
     /// slots (where the name field is hidden).</para>
     /// </summary>
-    internal sealed class SaveSlotOverlay : IUiOverlay
-    {
+    internal sealed class SaveSlotOverlay : IUiOverlay {
         // The active slot index is a private instance field on TitleScreenScript.
         private static readonly AccessTools.FieldRef<TitleScreenScript, int> ActiveSlotIndex =
             AccessTools.FieldRefAccess<TitleScreenScript, int>("idxActiveSaveSlotInMenu");
@@ -45,30 +43,31 @@ namespace TangledeepAccess.Overlays
         /// overlay should handle per-item readiness within its build, not by sleeping the whole
         /// overlay on the focused item. Revisit when this screen gets first-class input.
         /// </summary>
-        public OverlayResult Handler()
-        {
+        public OverlayResult Handler() {
             bool onTitle =
                 GameMasterScript.gmsSingleton != null
                 && GameMasterScript.gmsSingleton.titleScreenGMS;
-            if (!onTitle || TitleScreenScript.CreateStage != CreationStages.SELECTSLOT)
+            if (!onTitle || TitleScreenScript.CreateStage != CreationStages.SELECTSLOT) {
                 return OverlayResult.Inactive;
+            }
 
-            if (TitleScreenScript.cursorIsOnChangePages)
+            if (TitleScreenScript.cursorIsOnChangePages) {
                 return OverlayResult.Active(this); // page buttons carry their own text
+            }
 
             return IsReady(CurrentBlock())
                 ? OverlayResult.Active(this)
                 : OverlayResult.Sleeping(OverlayId.SaveSlot);
         }
 
-        public void Build(IOverlayBuilder builder)
-        {
+        public void Build(IOverlayBuilder builder) {
             // The page-change buttons use the normal focus model; read the focused one.
-            if (TitleScreenScript.cursorIsOnChangePages)
-            {
+            if (TitleScreenScript.cursorIsOnChangePages) {
                 UIManagerScript.UIObject focus = UIManagerScript.uiObjectFocus;
-                if (focus == null)
+                if (focus == null) {
                     return;
+                }
+
                 ControlId pageId = ControlId.ForObject(focus);
                 builder.AddLabel(pageId, ctx => Speak(ctx, GameLabelReader.ReadLabel(focus)));
                 builder.SetStart(pageId);
@@ -78,8 +77,9 @@ namespace TangledeepAccess.Overlays
             // Slots: a custom cursor over a static array (no uiObjectFocus involved). The
             // handler only reports Active when the current block is ready, so it is here.
             SaveDataDisplayBlock block = CurrentBlock();
-            if (!IsReady(block))
+            if (!IsReady(block)) {
                 return;
+            }
 
             // The index in the structural key makes moving slots change the node => re-speak.
             ControlId slotId = ControlId.Structural("saveslot:" + block.slotIndex);
@@ -88,31 +88,29 @@ namespace TangledeepAccess.Overlays
         }
 
         /// <summary>The save panel under the slot cursor, or null if not resolvable yet.</summary>
-        private static SaveDataDisplayBlock CurrentBlock()
-        {
+        private static SaveDataDisplayBlock CurrentBlock() {
             TitleScreenScript title = TitleScreenScript.titleScreenSingleton;
             SaveDataDisplayBlock[] blocks = UIManagerScript.saveDataDisplayComponents;
-            if (title == null || blocks == null)
+            if (title == null || blocks == null) {
                 return null;
+            }
 
             int idx = ActiveSlotIndex(title);
             return idx >= 0 && idx < blocks.Length ? blocks[idx] : null;
         }
 
         /// <summary>A panel is ready when it has displayed real data and has no pending update.</summary>
-        private static bool IsReady(SaveDataDisplayBlock block)
-        {
+        private static bool IsReady(SaveDataDisplayBlock block) {
             return block != null && LocalizedEver(block) && !block.bInfoIsDirty;
         }
 
-        private static void Speak(OverlayCtx ctx, string text)
-        {
-            if (!string.IsNullOrEmpty(text))
+        private static void Speak(OverlayCtx ctx, string text) {
+            if (!string.IsNullOrEmpty(text)) {
                 ctx.Message.Fragment(text);
+            }
         }
 
-        private static string ReadSlot(SaveDataDisplayBlock block)
-        {
+        private static string ReadSlot(SaveDataDisplayBlock block) {
             var message = new MessageBuilder();
 
             // The name field is "N. HeroName" for a populated slot; when hidden (empty / new)
@@ -131,16 +129,15 @@ namespace TangledeepAccess.Overlays
             return message.Build();
         }
 
-        private static void AppendIfShown(MessageBuilder message, TextMeshProUGUI field)
-        {
+        private static void AppendIfShown(MessageBuilder message, TextMeshProUGUI field) {
             string text = Field(field);
-            if (text != null)
+            if (text != null) {
                 message.ListItem(text);
+            }
         }
 
         /// <summary>A field's cleaned text, or null when the game has it hidden/empty.</summary>
-        private static string Field(TextMeshProUGUI field)
-        {
+        private static string Field(TextMeshProUGUI field) {
             return field != null && field.enabled ? GameLabelReader.Clean(field.text) : null;
         }
     }

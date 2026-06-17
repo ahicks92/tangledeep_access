@@ -1,0 +1,52 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{csproj,props,targets,json}]
+indent_size = 2
+
+[*.cs]
+indent_size = 4
+
+# --- One True Brace Style (1TBS) ---------------------------------------------
+# Every opening brace stays on the same line as its construct (types, methods,
+# control blocks, lambdas, everything).
+csharp_new_line_before_open_brace = none
+# Cuddle the continuation keywords onto the closing brace: "} else {", "} catch".
+csharp_new_line_before_else = false
+csharp_new_line_before_catch = false
+csharp_new_line_before_finally = false
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+# Always require braces, even on single-statement blocks (the "one TRUE brace").
+csharp_prefer_braces = true:warning
+dotnet_diagnostic.IDE0011.severity = warning
+
+# --- Whitespace / indentation -------------------------------------------------
+csharp_indent_case_contents = true
+csharp_indent_case_contents_when_block = false
+csharp_indent_switch_labels = true
+csharp_indent_labels = one_less_than_current
+
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_parentheses = false
+csharp_space_around_binary_operators = before_and_after
+
+# --- Using directives ---------------------------------------------------------
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# Preserve single-line blocks/statements where the author wrote them compactly.
+csharp_preserve_single_line_blocks = true
+csharp_preserve_single_line_statements = false

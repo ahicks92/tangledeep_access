@@ -2,8 +2,7 @@ using HarmonyLib;
 using TangledeepAccess.Ui;
 using UnityEngine;
 
-namespace TangledeepAccess.Patches
-{
+namespace TangledeepAccess.Patches {
     /// <summary>
     /// Our in-game key handling. TDInputHandler.UpdateInput is the single chokepoint for
     /// in-game input (it is NOT called on the title screen, which is why this naturally
@@ -15,37 +14,47 @@ namespace TangledeepAccess.Patches
     /// navigable overlay) returns true and passes straight through to the game.
     /// </summary>
     [HarmonyPatch(typeof(TDInputHandler), "UpdateInput")]
-    internal static class TDInputHandler_UpdateInput_Patch
-    {
-        private static bool Prefix()
-        {
+    internal static class TDInputHandler_UpdateInput_Patch {
+        private static bool Prefix() {
             OverlayDispatcher dispatcher = UiRuntime.Dispatcher;
-            if (dispatcher == null || !dispatcher.WantsInputCapture)
+            if (dispatcher == null || !dispatcher.WantsInputCapture) {
                 return true; // nothing to drive — let the game handle input
+            }
 
-            if (!UIManagerScript.AnyInteractableWindowOpen())
+            if (!UIManagerScript.AnyInteractableWindowOpen()) {
                 return true; // only take over while a menu is actually open
+            }
 
             NavCommand? command = ReadNavKey();
-            if (!command.HasValue)
+            if (!command.HasValue) {
                 return true; // unrecognized key — pass through to the game
+            }
 
             UiRuntime.SetPendingNav(command.Value);
             return false; // we handled it; suppress the game's input this frame
         }
 
-        private static NavCommand? ReadNavKey()
-        {
-            if (Input.GetKeyDown(KeyCode.UpArrow))
+        private static NavCommand? ReadNavKey() {
+            if (Input.GetKeyDown(KeyCode.UpArrow)) {
                 return NavCommand.Up;
-            if (Input.GetKeyDown(KeyCode.DownArrow))
+            }
+
+            if (Input.GetKeyDown(KeyCode.DownArrow)) {
                 return NavCommand.Down;
-            if (Input.GetKeyDown(KeyCode.LeftArrow))
+            }
+
+            if (Input.GetKeyDown(KeyCode.LeftArrow)) {
                 return NavCommand.Left;
-            if (Input.GetKeyDown(KeyCode.RightArrow))
+            }
+
+            if (Input.GetKeyDown(KeyCode.RightArrow)) {
                 return NavCommand.Right;
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            }
+
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) {
                 return NavCommand.Activate;
+            }
+
             return null;
         }
     }

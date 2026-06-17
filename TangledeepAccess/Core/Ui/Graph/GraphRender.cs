@@ -1,14 +1,12 @@
 using System.Collections.Generic;
 
-namespace TangledeepAccess.Ui.Graph
-{
+namespace TangledeepAccess.Ui.Graph {
     /// <summary>
     /// One built snapshot of a graph: the nodes (keyed by structural identity) and the
     /// control focus starts at when there is no prior position. Rebuilt every tick and
     /// thrown away — capture live state in the node callbacks, not here.
     /// </summary>
-    public sealed class GraphRender
-    {
+    public sealed class GraphRender {
         public ControlId StartKey;
         public readonly Dictionary<ControlId, GraphNode> Nodes =
             new Dictionary<ControlId, GraphNode>();
@@ -20,8 +18,7 @@ namespace TangledeepAccess.Ui.Graph
     /// last computed traversal order (for closest-survivor recovery), and a one-shot
     /// move request.
     /// </summary>
-    public sealed class GraphState
-    {
+    public sealed class GraphState {
         /// <summary>The focused control's id (carries its Reference for tier-1 recovery). Null until first render.</summary>
         public ControlId CurKey;
 

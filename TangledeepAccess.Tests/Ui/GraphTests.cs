@@ -6,18 +6,14 @@ using TangledeepAccess.Ui;
 using TangledeepAccess.Ui.Graph;
 using Xunit;
 
-namespace TangledeepAccess.Tests.Ui
-{
-    public class GraphTests
-    {
+namespace TangledeepAccess.Tests.Ui {
+    public class GraphTests {
         private static OverlayCtx Ctx() => new OverlayCtx(new MessageBuilder(), Modifiers.None);
 
         // A vertical menu whose nodes are keyed by, and speak, the given strings.
-        private static GraphRender Menu(params string[] keys)
-        {
+        private static GraphRender Menu(params string[] keys) {
             var b = new GraphBuilder();
-            foreach (string k in keys)
-            {
+            foreach (string k in keys) {
                 string key = k;
                 b.AddLabel(ControlId.Structural(key), ctx => ctx.Message.Fragment(key));
             }
@@ -28,14 +24,12 @@ namespace TangledeepAccess.Tests.Ui
             KeyGraph.ComputeOrder(r).Select(c => (string)c.StructuralKey).ToList();
 
         [Fact]
-        public void VerticalMenuOrderIsTopToBottom()
-        {
+        public void VerticalMenuOrderIsTopToBottom() {
             Assert.Equal(new[] { "a", "b", "c" }, OrderKeys(Menu("a", "b", "c")));
         }
 
         [Fact]
-        public void GridOrderIsRowMajor()
-        {
+        public void GridOrderIsRowMajor() {
             // Two column-linked rows: [a b] over [c d].
             var b = new GraphBuilder();
             b.StartRow("g")
@@ -50,8 +44,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void DeletingFocusedNodeLandsOnPreviousInOrder()
-        {
+        public void DeletingFocusedNodeLandsOnPreviousInOrder() {
             GraphRender render = Menu("a", "b", "c", "d");
             var state = new GraphState();
             var g = new KeyGraph(_ => render, state);
@@ -66,8 +59,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void DeletingFirstNodeFallsBackToStart()
-        {
+        public void DeletingFirstNodeFallsBackToStart() {
             GraphRender render = Menu("a", "b", "c");
             var state = new GraphState();
             var g = new KeyGraph(_ => render, state);
@@ -80,8 +72,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void Tier1FollowsMovedObjectWhenStructuralKeyChanged()
-        {
+        public void Tier1FollowsMovedObjectWhenStructuralKeyChanged() {
             object item = new object();
             var b1 = new GraphBuilder();
             b1.AddLabel(ControlId.Structural("filler"), c => c.Message.Fragment("filler"));
@@ -105,8 +96,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void Tier2FollowsStructuralKeyWhenObjectRebuilt()
-        {
+        public void Tier2FollowsStructuralKeyWhenObjectRebuilt() {
             object refA = new object();
             var b1 = new GraphBuilder();
             b1.AddLabel(ControlId.Referenced(refA, "k"), c => c.Message.Fragment("x"));
@@ -131,8 +121,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void MoveDownSpeaksDestinationAndAdvancesCursor()
-        {
+        public void MoveDownSpeaksDestinationAndAdvancesCursor() {
             GraphRender render = Menu("a", "b", "c");
             var state = new GraphState();
             var g = new KeyGraph(_ => render, state);
@@ -145,8 +134,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void MoveAtEdgeRereadsCurrent()
-        {
+        public void MoveAtEdgeRereadsCurrent() {
             GraphRender render = Menu("a", "b");
             var state = new GraphState();
             var g = new KeyGraph(_ => render, state);
@@ -161,8 +149,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void MoveToEdgeJumpsToBottom()
-        {
+        public void MoveToEdgeJumpsToBottom() {
             GraphRender render = Menu("a", "b", "c", "d");
             var state = new GraphState();
             var g = new KeyGraph(_ => render, state);
@@ -175,8 +162,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void SuggestMoveIsHonoredOnNextRender()
-        {
+        public void SuggestMoveIsHonoredOnNextRender() {
             GraphRender render = Menu("a", "b", "c");
             var state = new GraphState();
             var g = new KeyGraph(_ => render, state);
@@ -189,8 +175,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void RawGraphBuildsArbitraryTransitions()
-        {
+        public void RawGraphBuildsArbitraryTransitions() {
             // Mirror a 2x2 grid via the raw API (as the generic overlay does from neighbors).
             var b = new GraphBuilder();
             ControlId a = ControlId.Structural("a"),
@@ -220,8 +205,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void RawStartDefaultsToFirstNode()
-        {
+        public void RawStartDefaultsToFirstNode() {
             var b = new GraphBuilder();
             b.AddNode(
                 ControlId.Structural("x"),
@@ -236,8 +220,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void MixingRawAndMenuThrows()
-        {
+        public void MixingRawAndMenuThrows() {
             var b = new GraphBuilder();
             b.AddNode(
                 ControlId.Structural("x"),
@@ -248,20 +231,17 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void EmptyBuildClosesGraph()
-        {
+        public void EmptyBuildClosesGraph() {
             var state = new GraphState();
             var g = new KeyGraph(_ => new GraphBuilder().Build(), state); // Build() => null
             Assert.False(g.Rerender(Ctx()));
         }
 
         [Fact]
-        public void CloseFromCallbackClosesGraph()
-        {
+        public void CloseFromCallbackClosesGraph() {
             var state = new GraphState();
             var g = new KeyGraph(
-                ctx =>
-                {
+                ctx => {
                     ctx.Controller.Close();
                     return Menu("a");
                 },

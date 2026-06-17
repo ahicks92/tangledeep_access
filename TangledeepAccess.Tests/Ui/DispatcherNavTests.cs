@@ -4,20 +4,15 @@ using TangledeepAccess.Ui;
 using TangledeepAccess.Ui.Graph;
 using Xunit;
 
-namespace TangledeepAccess.Tests.Ui
-{
-    public class DispatcherNavTests
-    {
+namespace TangledeepAccess.Tests.Ui {
+    public class DispatcherNavTests {
         // Game-backed nodes (labels only, no mod handler) identified by real objects.
-        private sealed class RefOverlay : IUiOverlay
-        {
+        private sealed class RefOverlay : IUiOverlay {
             public OverlayId Id => OverlayId.Inventory;
             public readonly List<(object Obj, string Name)> Items = new();
 
-            public void Build(IOverlayBuilder builder)
-            {
-                foreach (var (obj, name) in Items)
-                {
+            public void Build(IOverlayBuilder builder) {
+                foreach (var (obj, name) in Items) {
                     string n = name;
                     builder.AddNode(
                         ControlId.ForObject(obj),
@@ -25,8 +20,7 @@ namespace TangledeepAccess.Tests.Ui
                     );
                 }
                 // Wire a simple vertical chain so navigation has somewhere to go.
-                for (int i = 0; i + 1 < Items.Count; i++)
-                {
+                for (int i = 0; i + 1 < Items.Count; i++) {
                     ControlId a = ControlId.ForObject(Items[i].Obj);
                     ControlId b = ControlId.ForObject(Items[i + 1].Obj);
                     builder.Connect(a, TangledeepAccess.Ui.Graph.GraphDir.Down, b);
@@ -36,8 +30,7 @@ namespace TangledeepAccess.Tests.Ui
             }
         }
 
-        private static RefOverlay TwoItem(out object a, out object b)
-        {
+        private static RefOverlay TwoItem(out object a, out object b) {
             a = new object();
             b = new object();
             var o = new RefOverlay();
@@ -47,8 +40,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void NavigateMovesCursorReportsMoveAndFocus()
-        {
+        public void NavigateMovesCursorReportsMoveAndFocus() {
             object a,
                 b;
             var overlay = TwoItem(out a, out b);
@@ -64,8 +56,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void NavigateAtEdgeDoesNotReportMove()
-        {
+        public void NavigateAtEdgeDoesNotReportMove() {
             object a,
                 b;
             var overlay = TwoItem(out a, out b);
@@ -80,8 +71,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void ActivateGameBackedNodeReportsActivated()
-        {
+        public void ActivateGameBackedNodeReportsActivated() {
             object a,
                 b;
             var overlay = TwoItem(out a, out b);
@@ -96,8 +86,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void ActivateModNodeRunsHandlerNotGame()
-        {
+        public void ActivateModNodeRunsHandlerNotGame() {
             bool clicked = false;
             var overlay = new ClickOverlay(() => clicked = true);
             var d = new OverlayDispatcher();
@@ -111,8 +100,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void WantsInputCaptureReflectsTreeSize()
-        {
+        public void WantsInputCaptureReflectsTreeSize() {
             object a,
                 b;
             var twoItem = TwoItem(out a, out b);
@@ -129,20 +117,17 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         // One mod-side clickable node (has an OnClick handler).
-        private sealed class ClickOverlay : IUiOverlay
-        {
+        private sealed class ClickOverlay : IUiOverlay {
             private readonly Action _onClick;
 
             public ClickOverlay(Action onClick) => _onClick = onClick;
 
             public OverlayId Id => OverlayId.CharCreation;
 
-            public void Build(IOverlayBuilder builder)
-            {
+            public void Build(IOverlayBuilder builder) {
                 builder.AddNode(
                     ControlId.Structural("only"),
-                    new NodeVtable
-                    {
+                    new NodeVtable {
                         Label = ctx => ctx.Message.Fragment("only"),
                         OnClick = (ctx, mods) => _onClick(),
                     }

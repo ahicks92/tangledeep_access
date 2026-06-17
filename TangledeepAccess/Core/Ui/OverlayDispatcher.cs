@@ -2,8 +2,7 @@ using System.Collections.Generic;
 using TangledeepAccess.Speech;
 using TangledeepAccess.Ui.Graph;
 
-namespace TangledeepAccess.Ui
-{
+namespace TangledeepAccess.Ui {
     /// <summary>
     /// Drives the overlay system one tick at a time. Holds an ordered list of handlers
     /// (last registered = top of the stack) and, per <see cref="OverlayId"/>, an ephemeral
@@ -19,8 +18,7 @@ namespace TangledeepAccess.Ui
     /// <para>This type is BCL-only. It invokes overlay/handler delegates that read game
     /// state, but never touches the engine itself, keeping it unit-testable off-engine.</para>
     /// </summary>
-    public sealed class OverlayDispatcher
-    {
+    public sealed class OverlayDispatcher {
         private readonly List<OverlayHandler> _handlers = new List<OverlayHandler>();
         private readonly Dictionary<OverlayId, GraphState> _cache =
             new Dictionary<OverlayId, GraphState>();
@@ -40,8 +38,7 @@ namespace TangledeepAccess.Ui
         public bool WantsInputCapture { get; private set; }
 
         /// <summary>Register a handler. The last one registered sits at the top of the stack.</summary>
-        public void Register(OverlayHandler handler)
-        {
+        public void Register(OverlayHandler handler) {
             _handlers.Add(handler);
         }
 
@@ -50,8 +47,7 @@ namespace TangledeepAccess.Ui
         /// UIObject from the ChangeUIFocus hook). The next <see cref="Tick"/> with no nav
         /// command syncs our cursor to the matching node. Recorded off the pump; applied on it.
         /// </summary>
-        public void RecordGameFocus(object reference)
-        {
+        public void RecordGameFocus(object reference) {
             _pendingGameFocus = reference;
         }
 
@@ -60,8 +56,7 @@ namespace TangledeepAccess.Ui
         /// caller should speak / sound / focus this tick. Must be called on the main thread
         /// because overlay callbacks read live game state.
         /// </summary>
-        public TickResult Tick(NavCommand? command = null)
-        {
+        public TickResult Tick(NavCommand? command = null) {
             OverlayResult result = FindActive();
 
             bool hasActive = result != null && result.Kind != OverlayResultKind.Inactive;
@@ -69,8 +64,7 @@ namespace TangledeepAccess.Ui
 
             // Clear the cache of an id that was active last tick but is not active now (or was
             // replaced). Sleeping keeps the id active, so no clear.
-            if (_hasActiveLast && (!hasActive || !activeId.Equals(_activeLast)))
-            {
+            if (_hasActiveLast && (!hasActive || !activeId.Equals(_activeLast))) {
                 _cache.Remove(_activeLast);
                 _lastSpoken = null;
             }
@@ -81,8 +75,7 @@ namespace TangledeepAccess.Ui
             object gameFocus = _pendingGameFocus;
             _pendingGameFocus = null;
 
-            if (!hasActive || result.Kind == OverlayResultKind.Sleeping)
-            {
+            if (!hasActive || result.Kind == OverlayResultKind.Sleeping) {
                 WantsInputCapture = false;
                 return TickResult.Empty;
             }
@@ -90,13 +83,12 @@ namespace TangledeepAccess.Ui
             return BuildAndProcess(result.Overlay, gameFocus, command);
         }
 
-        private OverlayResult FindActive()
-        {
-            for (int i = _handlers.Count - 1; i >= 0; i--)
-            {
+        private OverlayResult FindActive() {
+            for (int i = _handlers.Count - 1; i >= 0; i--) {
                 OverlayResult r = _handlers[i]();
-                if (r != null && r.Kind != OverlayResultKind.Inactive)
+                if (r != null && r.Kind != OverlayResultKind.Inactive) {
                     return r;
+                }
             }
 
             return OverlayResult.Inactive;
@@ -106,11 +98,9 @@ namespace TangledeepAccess.Ui
             IUiOverlay overlay,
             object gameFocus,
             NavCommand? command
-        )
-        {
+        ) {
             GraphState state;
-            if (!_cache.TryGetValue(overlay.Id, out state))
-            {
+            if (!_cache.TryGetValue(overlay.Id, out state)) {
                 state = new GraphState();
                 _cache[overlay.Id] = state;
             }
@@ -119,8 +109,7 @@ namespace TangledeepAccess.Ui
             var ctx = new OverlayCtx(message, Modifiers.None);
             var graph = new KeyGraph(c => BuildRender(overlay, c), state);
 
-            if (!graph.Rerender(ctx))
-            {
+            if (!graph.Rerender(ctx)) {
                 // The overlay built nothing this tick — treat as closed and drop its cache.
                 _cache.Remove(overlay.Id);
                 _hasActiveLast = false;
@@ -132,8 +121,9 @@ namespace TangledeepAccess.Ui
             // We capture input only for a real navigable tree, never a degenerate one.
             WantsInputCapture = graph.Current.Nodes.Count > 1;
 
-            if (command.HasValue)
+            if (command.HasValue) {
                 return ApplyNav(graph, state, ctx, message, command.Value);
+            }
 
             return Follow(graph, state, ctx, message, gameFocus);
         }
@@ -144,26 +134,23 @@ namespace TangledeepAccess.Ui
             OverlayCtx ctx,
             MessageBuilder message,
             NavCommand command
-        )
-        {
+        ) {
             var result = new TickResult();
 
-            if (command == NavCommand.Activate)
-            {
+            if (command == NavCommand.Activate) {
                 ControlId cur = state.CurKey;
                 GraphNode node = null;
-                if (cur != null)
+                if (cur != null) {
                     graph.Current.Nodes.TryGetValue(cur, out node);
+                }
+
                 bool hasModHandler = node != null && node.Vtable.OnClick != null;
 
-                if (hasModHandler)
-                {
+                if (hasModHandler) {
                     // Mod-side control: run its handler; the game is not involved.
                     graph.Click(ctx, Modifiers.None);
                     result.Speak = message.Build();
-                }
-                else
-                {
+                } else {
                     // Game-backed pass-through: let the caller confirm it through the game.
                     result.Activated = true;
                     result.FocusReference = cur?.Reference;
@@ -189,30 +176,30 @@ namespace TangledeepAccess.Ui
             OverlayCtx ctx,
             MessageBuilder message,
             object gameFocus
-        )
-        {
+        ) {
             // Sync to the game's focus if it moved (tier-1 reference match).
-            if (gameFocus != null)
+            if (gameFocus != null) {
                 graph.FocusByReference(gameFocus);
+            }
 
             ControlId cur = state.CurKey;
-            if (cur == null || cur.Equals(_lastSpoken))
+            if (cur == null || cur.Equals(_lastSpoken)) {
                 return TickResult.Empty;
+            }
 
             _lastSpoken = cur;
 
             GraphNode node;
-            if (!graph.Current.Nodes.TryGetValue(cur, out node) || node.Vtable.Label == null)
+            if (!graph.Current.Nodes.TryGetValue(cur, out node) || node.Vtable.Label == null) {
                 return TickResult.Empty;
+            }
 
             node.Vtable.Label(ctx);
             return new TickResult { Speak = message.Build() };
         }
 
-        private static GraphDir ToDir(NavCommand command)
-        {
-            switch (command)
-            {
+        private static GraphDir ToDir(NavCommand command) {
+            switch (command) {
                 case NavCommand.Up:
                     return GraphDir.Up;
                 case NavCommand.Right:
@@ -224,8 +211,7 @@ namespace TangledeepAccess.Ui
             }
         }
 
-        private static GraphRender BuildRender(IUiOverlay overlay, OverlayCtx ctx)
-        {
+        private static GraphRender BuildRender(IUiOverlay overlay, OverlayCtx ctx) {
             var builder = new GraphBuilder();
             overlay.Build(builder);
             return builder.Build();

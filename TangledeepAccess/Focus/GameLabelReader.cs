@@ -1,8 +1,7 @@
 using TMPro;
 using UnityEngine;
 
-namespace TangledeepAccess.Focus
-{
+namespace TangledeepAccess.Focus {
     /// <summary>
     /// Reads a spoken label off a raw game UI element. This is the lowest-common-denominator
     /// description used by the generic fallback overlay (and previously by FocusAnnouncer):
@@ -12,35 +11,40 @@ namespace TangledeepAccess.Focus
     /// Touches game types (TextMeshProUGUI, CustomAlgorithms), so it lives outside Core/.
     /// Richer overlays bypass this and read structured game data instead.
     /// </summary>
-    internal static class GameLabelReader
-    {
-        public static string ReadLabel(UIManagerScript.UIObject obj)
-        {
-            if (obj == null)
+    internal static class GameLabelReader {
+        public static string ReadLabel(UIManagerScript.UIObject obj) {
+            if (obj == null) {
                 return null;
+            }
 
             string raw = null;
-            if (obj.subObjectTMPro != null)
+            if (obj.subObjectTMPro != null) {
                 raw = obj.subObjectTMPro.text;
-            if (string.IsNullOrEmpty(raw) && obj.gameObj != null)
-            {
-                TextMeshProUGUI tmp = obj.gameObj.GetComponentInChildren<TextMeshProUGUI>();
-                if (tmp != null)
-                    raw = tmp.text;
             }
-            if (string.IsNullOrEmpty(raw) && obj.button != null)
+
+            if (string.IsNullOrEmpty(raw) && obj.gameObj != null) {
+                TextMeshProUGUI tmp = obj.gameObj.GetComponentInChildren<TextMeshProUGUI>();
+                if (tmp != null) {
+                    raw = tmp.text;
+                }
+            }
+            if (string.IsNullOrEmpty(raw) && obj.button != null) {
                 raw = obj.button.buttonText;
-            if (string.IsNullOrEmpty(raw))
+            }
+
+            if (string.IsNullOrEmpty(raw)) {
                 return null;
+            }
 
             return Clean(raw);
         }
 
         /// <summary>Strip TMP color/markup tags and trim; null/empty in returns null.</summary>
-        public static string Clean(string raw)
-        {
-            if (string.IsNullOrEmpty(raw))
+        public static string Clean(string raw) {
+            if (string.IsNullOrEmpty(raw)) {
                 return null;
+            }
+
             string cleaned = CustomAlgorithms.StripColors(raw).Trim();
             return string.IsNullOrEmpty(cleaned) ? null : cleaned;
         }

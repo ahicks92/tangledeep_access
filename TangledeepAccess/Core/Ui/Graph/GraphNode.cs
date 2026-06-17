@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 
-namespace TangledeepAccess.Ui.Graph
-{
+namespace TangledeepAccess.Ui.Graph {
     /// <summary>The four navigable directions between graph nodes.</summary>
-    public enum GraphDir
-    {
+    public enum GraphDir {
         Up,
         Right,
         Down,
@@ -17,8 +15,7 @@ namespace TangledeepAccess.Ui.Graph
     /// description); the rest are optional actions. Only the handlers needed now are
     /// present — the set grows as behaviors are defined (read-info, tooltips, etc.).
     /// </summary>
-    public sealed class NodeVtable
-    {
+    public sealed class NodeVtable {
         /// <summary>Required. Append this control's spoken description to the message.</summary>
         public Action<OverlayCtx> Label;
 
@@ -39,8 +36,7 @@ namespace TangledeepAccess.Ui.Graph
     }
 
     /// <summary>A directed edge to another node, with optional transition speech/sound.</summary>
-    public sealed class Transition
-    {
+    public sealed class Transition {
         public ControlId Destination;
 
         /// <summary>Optional. Spoken only while crossing this edge (e.g. lane changes).</summary>
@@ -51,8 +47,7 @@ namespace TangledeepAccess.Ui.Graph
     }
 
     /// <summary>A control: its identity, behaviors, and up to four directional transitions.</summary>
-    public sealed class GraphNode
-    {
+    public sealed class GraphNode {
         public ControlId Id;
         public NodeVtable Vtable;
         public readonly Dictionary<GraphDir, Transition> Transitions =

@@ -2,13 +2,10 @@ using System;
 using TangledeepAccess.Speech;
 using Xunit;
 
-namespace TangledeepAccess.Tests.Ui
-{
-    public class MessageBuilderTests
-    {
+namespace TangledeepAccess.Tests.Ui {
+    public class MessageBuilderTests {
         [Fact]
-        public void FragmentsAreSpaceJoinedListItemsAreCommaJoined()
-        {
+        public void FragmentsAreSpaceJoinedListItemsAreCommaJoined() {
             string msg = new MessageBuilder()
                 .Fragment("the thing with")
                 .ListItem("a")
@@ -19,14 +16,12 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void NoLeadingSpaceOnFirstFragment()
-        {
+        public void NoLeadingSpaceOnFirstFragment() {
             Assert.Equal("x", new MessageBuilder().Fragment("x").Build());
         }
 
         [Fact]
-        public void FragmentsWithinAListItemAreSpaceJoined()
-        {
+        public void FragmentsWithinAListItemAreSpaceJoined() {
             string msg = new MessageBuilder()
                 .ListItem("hello")
                 .Fragment("world")
@@ -36,8 +31,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void ForcedCommaSeparatesFromPrecedingFragment()
-        {
+        public void ForcedCommaSeparatesFromPrecedingFragment() {
             string msg = new MessageBuilder()
                 .Fragment("grid")
                 .ListItemForcedComma("3 by 3")
@@ -46,8 +40,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void NullAndEmptyFragmentsAreIgnored()
-        {
+        public void NullAndEmptyFragmentsAreIgnored() {
             string msg = new MessageBuilder()
                 .Fragment("a")
                 .Fragment(null)
@@ -58,22 +51,19 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void EmptyBuilderBuildsNull()
-        {
+        public void EmptyBuilderBuildsNull() {
             Assert.Null(new MessageBuilder().Build());
         }
 
         [Fact]
-        public void ReuseAfterBuildThrows()
-        {
+        public void ReuseAfterBuildThrows() {
             var b = new MessageBuilder().Fragment("x");
             b.Build();
             Assert.Throws<InvalidOperationException>(() => b.Fragment("y"));
         }
 
         [Fact]
-        public void ExplicitSpaceFragmentThrows()
-        {
+        public void ExplicitSpaceFragmentThrows() {
             Assert.Throws<ArgumentException>(() => new MessageBuilder().Fragment(" "));
         }
     }

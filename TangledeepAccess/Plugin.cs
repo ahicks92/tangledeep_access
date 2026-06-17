@@ -9,16 +9,14 @@ using TangledeepAccess.Speech;
 using TangledeepAccess.Ui;
 using TangledeepAccess.Util;
 
-namespace TangledeepAccess
-{
+namespace TangledeepAccess {
     /// <summary>
     /// BepInEx entry point. Awake does non-Unity setup only (logging, native
     /// preload, Prism init, Harmony patching). Update pumps focus announcements
     /// once per frame, so the focused menu element is spoken as focus moves.
     /// </summary>
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
-    public partial class Plugin : BaseUnityPlugin
-    {
+    public partial class Plugin : BaseUnityPlugin {
         public const string PluginGuid = "io.ahicks.tangledeepaccess";
         public const string PluginName = "Tangledeep Access";
 
@@ -29,15 +27,13 @@ namespace TangledeepAccess
         private Harmony _harmony;
         private OverlayDispatcher _dispatcher;
 
-        private void Awake()
-        {
+        private void Awake() {
             LogBepInExBackend.Install(Logger);
             Log.Info(PluginName + " " + PluginVersion + " loading");
 
             // Native preload + Prism init are pure native work (no Unity state), safe here.
             string pluginDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            if (NativeLoader.LoadPrism(pluginDir))
-            {
+            if (NativeLoader.LoadPrism(pluginDir)) {
                 _speech = new PrismSpeech();
                 _speech.Initialize();
             }
@@ -49,21 +45,17 @@ namespace TangledeepAccess
             _dispatcher.Register(new SaveSlotOverlay().Handler); // higher priority than generic
             UiRuntime.Dispatcher = _dispatcher;
 
-            try
-            {
+            try {
                 _harmony = new Harmony(PluginGuid);
                 // Patch every annotated type in this assembly (focus chokepoint + in-game input).
                 _harmony.PatchAll(Assembly.GetExecutingAssembly());
                 Log.Info("Harmony patches applied");
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
                 Log.Error("Harmony patch failed: " + e);
             }
         }
 
-        private void Update()
-        {
+        private void Update() {
             // Single per-frame pump. The input hook (TDInputHandler prefix) stashes a nav
             // command; we apply it through the dispatcher, then carry out the game-side
             // effects it asks for. Speaking and game calls stay here, never in a Harmony hook.
@@ -72,22 +64,23 @@ namespace TangledeepAccess
 
             // We moved under our own navigation: follow the game's focus to match and play
             // its move sound (the game didn't move it — we suppressed its input).
-            if (result.Moved && result.FocusReference is UIManagerScript.UIObject moveTarget)
-            {
+            if (result.Moved && result.FocusReference is UIManagerScript.UIObject moveTarget) {
                 UIManagerScript.ChangeUIFocusAndAlignCursor(moveTarget);
                 UIManagerScript.PlayCursorSound("Move");
             }
 
             // Player activated a game-backed control: confirm it through the game.
-            if (result.Activated)
-            {
-                if (result.FocusReference is UIManagerScript.UIObject confirmTarget)
+            if (result.Activated) {
+                if (result.FocusReference is UIManagerScript.UIObject confirmTarget) {
                     UIManagerScript.ChangeUIFocusAndAlignCursor(confirmTarget);
+                }
+
                 UIManagerScript.singletonUIMS?.CursorConfirm();
             }
 
-            if (!string.IsNullOrEmpty(result.Speak))
+            if (!string.IsNullOrEmpty(result.Speak)) {
                 _speech?.Speak(result.Speak);
+            }
         }
     }
 }

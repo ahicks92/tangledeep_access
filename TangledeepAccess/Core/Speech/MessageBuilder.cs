@@ -1,8 +1,7 @@
 using System;
 using System.Text;
 
-namespace TangledeepAccess.Speech
-{
+namespace TangledeepAccess.Speech {
     /// <summary>
     /// Fluent message accumulator, ported from Factorio Access's MessageBuilder
     /// (scripts/speech.lua). The value it carries is the separation discipline:
@@ -14,10 +13,8 @@ namespace TangledeepAccess.Speech
     /// localized text at call time via StringManager, so this works over plain
     /// strings. Single-use: <see cref="Build"/> throws if the builder is reused.
     /// </summary>
-    public sealed class MessageBuilder
-    {
-        private enum State
-        {
+    public sealed class MessageBuilder {
+        private enum State {
             // Nothing appended yet.
             Initial,
 
@@ -42,10 +39,10 @@ namespace TangledeepAccess.Speech
         /// <summary>True if nothing has been appended yet.</summary>
         public bool IsEmpty => _sb.Length == 0;
 
-        private void CheckNotBuilt()
-        {
-            if (_state == State.Built)
+        private void CheckNotBuilt() {
+            if (_state == State.Built) {
                 throw new InvalidOperationException("Attempt to use a MessageBuilder twice");
+            }
         }
 
         /// <summary>
@@ -53,23 +50,25 @@ namespace TangledeepAccess.Speech
         /// space; the first fragment of a fresh list item is separated by a comma first.
         /// Null/empty fragments are ignored so optional pieces can be appended blindly.
         /// </summary>
-        public MessageBuilder Fragment(string fragment)
-        {
+        public MessageBuilder Fragment(string fragment) {
             CheckNotBuilt();
 
-            if (fragment == " ")
+            if (fragment == " ") {
                 throw new ArgumentException(
                     "Fragment(\" \") is unnecessary - spaces are added between fragments automatically"
                 );
+            }
 
-            if (string.IsNullOrEmpty(fragment))
+            if (string.IsNullOrEmpty(fragment)) {
                 return this;
+            }
 
             // Opening a new list item: emit the comma between items (never before the first).
-            if (_state == State.ListItem)
-            {
-                if (!_isFirstListItem)
+            if (_state == State.ListItem) {
+                if (!_isFirstListItem) {
                     _sb.Append(',');
+                }
+
                 _isFirstListItem = false;
             }
 
@@ -79,8 +78,9 @@ namespace TangledeepAccess.Speech
                     : State.Fragment;
 
             // A space separates everything except the very first piece of content.
-            if (_sb.Length > 0)
+            if (_sb.Length > 0) {
                 _sb.Append(' ');
+            }
 
             _sb.Append(fragment);
             return this;
@@ -90,12 +90,13 @@ namespace TangledeepAccess.Speech
         /// Mark a list-item boundary; the next fragment (here or passed in) starts a new
         /// comma-separated item. The optional fragment is appended after the boundary.
         /// </summary>
-        public MessageBuilder ListItem(string fragment = null)
-        {
+        public MessageBuilder ListItem(string fragment = null) {
             CheckNotBuilt();
             _state = State.ListItem;
-            if (!string.IsNullOrEmpty(fragment))
+            if (!string.IsNullOrEmpty(fragment)) {
                 Fragment(fragment);
+            }
+
             return this;
         }
 
@@ -103,13 +104,14 @@ namespace TangledeepAccess.Speech
         /// Like <see cref="ListItem"/> but forces a comma even for the first item, e.g.
         /// grids that always read "label, dimensions".
         /// </summary>
-        public MessageBuilder ListItemForcedComma(string fragment = null)
-        {
+        public MessageBuilder ListItemForcedComma(string fragment = null) {
             CheckNotBuilt();
             ListItem();
             _isFirstListItem = false;
-            if (!string.IsNullOrEmpty(fragment))
+            if (!string.IsNullOrEmpty(fragment)) {
                 Fragment(fragment);
+            }
+
             return this;
         }
 
@@ -117,8 +119,7 @@ namespace TangledeepAccess.Speech
         /// Finalize and return the message, or null if nothing was appended. The builder
         /// is single-use after this.
         /// </summary>
-        public string Build()
-        {
+        public string Build() {
             CheckNotBuilt();
             _state = State.Built;
             return _sb.Length == 0 ? null : _sb.ToString();

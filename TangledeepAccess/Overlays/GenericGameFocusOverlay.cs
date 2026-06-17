@@ -1,8 +1,7 @@
 using TangledeepAccess.Focus;
 using TangledeepAccess.Ui;
 
-namespace TangledeepAccess.Overlays
-{
+namespace TangledeepAccess.Overlays {
     /// <summary>
     /// The bottom-of-stack fallback overlay. It mirrors the game's current legacy UIObject
     /// graph as a tree (via <see cref="GameMenuMirror"/>) and reads each control's label from
@@ -14,20 +13,17 @@ namespace TangledeepAccess.Overlays
     /// handler. Nodes need not map to a game control, and the game's input loop never stops
     /// moving focus through ChangeUIFocus, so following that focus is permanent infrastructure.</para>
     /// </summary>
-    internal sealed class GenericGameFocusOverlay : IUiOverlay
-    {
+    internal sealed class GenericGameFocusOverlay : IUiOverlay {
         public OverlayId Id => OverlayId.GenericGameFocus;
 
         /// <summary>Active whenever the game reports a focused UI element.</summary>
-        public OverlayResult Handler()
-        {
+        public OverlayResult Handler() {
             return UIManagerScript.uiObjectFocus != null
                 ? OverlayResult.Active(this)
                 : OverlayResult.Inactive;
         }
 
-        public void Build(IOverlayBuilder builder)
-        {
+        public void Build(IOverlayBuilder builder) {
             GameMenuMirror.Build(builder, GameLabelReader.ReadLabel);
         }
     }

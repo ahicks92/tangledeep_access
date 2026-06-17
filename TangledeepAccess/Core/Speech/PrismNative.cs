@@ -2,8 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace TangledeepAccess.Speech
-{
+namespace TangledeepAccess.Speech {
     /// <summary>
     /// Raw P/Invoke surface for prism.dll (Prism v0.16.x, https://github.com/ethindp/prism).
     ///
@@ -22,24 +21,21 @@ namespace TangledeepAccess.Speech
     /// This is the complete exported surface; the managed wrapper (<see cref="PrismSpeech"/>)
     /// uses only a subset, but the full binding is kept so later work does not re-derive it.
     /// </summary>
-    internal static class PrismNative
-    {
+    internal static class PrismNative {
         // The native module's base name. NativeLoader preloads the full path from the
         // plugin folder first, so this by-name reference resolves to the loaded module.
         private const string Dll = "prism";
 
         /// <summary>PrismConfig: a single version byte (see PRISM_CONFIG_VERSION).</summary>
         [StructLayout(LayoutKind.Sequential)]
-        public struct PrismConfig
-        {
+        public struct PrismConfig {
             public byte Version;
         }
 
         /// <summary>Current config schema version expected by prism_init.</summary>
         public const byte ConfigVersion = 2;
 
-        public enum PrismError
-        {
+        public enum PrismError {
             Ok = 0,
             NotInitialized,
             InvalidParam,
@@ -260,10 +256,11 @@ namespace TangledeepAccess.Speech
         // --- UTF-8 marshaling helpers (hand-rolled; see class remarks) ---
 
         /// <summary>Encode a managed string as a NUL-terminated UTF-8 byte buffer.</summary>
-        public static byte[] ToUtf8(string s)
-        {
-            if (s == null)
+        public static byte[] ToUtf8(string s) {
+            if (s == null) {
                 s = string.Empty;
+            }
+
             int len = Encoding.UTF8.GetByteCount(s);
             var buf = new byte[len + 1];
             Encoding.UTF8.GetBytes(s, 0, s.Length, buf, 0);
@@ -272,23 +269,27 @@ namespace TangledeepAccess.Speech
         }
 
         /// <summary>Decode a NUL-terminated UTF-8 <c>const char*</c> the library owns.</summary>
-        public static string FromUtf8(IntPtr ptr)
-        {
-            if (ptr == IntPtr.Zero)
+        public static string FromUtf8(IntPtr ptr) {
+            if (ptr == IntPtr.Zero) {
                 return null;
+            }
+
             int len = 0;
-            while (Marshal.ReadByte(ptr, len) != 0)
+            while (Marshal.ReadByte(ptr, len) != 0) {
                 len++;
-            if (len == 0)
+            }
+
+            if (len == 0) {
                 return string.Empty;
+            }
+
             var buf = new byte[len];
             Marshal.Copy(ptr, buf, 0, len);
             return Encoding.UTF8.GetString(buf);
         }
 
         /// <summary>Human-readable text for a PrismError, via the library's own table.</summary>
-        public static string ErrorString(PrismError error)
-        {
+        public static string ErrorString(PrismError error) {
             return FromUtf8(prism_error_string(error));
         }
     }

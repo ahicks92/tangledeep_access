@@ -2,23 +2,18 @@ using System.Collections.Generic;
 using TangledeepAccess.Ui;
 using Xunit;
 
-namespace TangledeepAccess.Tests.Ui
-{
-    public class DispatcherTests
-    {
+namespace TangledeepAccess.Tests.Ui {
+    public class DispatcherTests {
         // An overlay whose nodes are backed by real objects, so game-focus sync (tier-1)
         // can target them. Each node speaks its name.
-        private sealed class RefOverlay : IUiOverlay
-        {
+        private sealed class RefOverlay : IUiOverlay {
             public OverlayId Id { get; }
             public readonly List<(object Obj, string Name)> Items = new();
 
             public RefOverlay(OverlayId id) => Id = id;
 
-            public void Build(IOverlayBuilder builder)
-            {
-                foreach (var (obj, name) in Items)
-                {
+            public void Build(IOverlayBuilder builder) {
+                foreach (var (obj, name) in Items) {
                     string n = name;
                     builder.AddLabel(ControlId.ForObject(obj), ctx => ctx.Message.Fragment(n));
                 }
@@ -26,8 +21,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void TopOfStackWins()
-        {
+        public void TopOfStackWins() {
             var bottom = new RefOverlay(OverlayId.GenericGameFocus);
             bottom.Items.Add((new object(), "bottom"));
             var top = new RefOverlay(OverlayId.Inventory);
@@ -41,8 +35,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void InactiveHandlersAreSkipped()
-        {
+        public void InactiveHandlersAreSkipped() {
             var overlay = new RefOverlay(OverlayId.GenericGameFocus);
             overlay.Items.Add((new object(), "generic"));
 
@@ -55,8 +48,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void GameFocusMovesCursorAndSpeaks()
-        {
+        public void GameFocusMovesCursorAndSpeaks() {
             object a = new object(),
                 b = new object();
             var overlay = new RefOverlay(OverlayId.Inventory);
@@ -73,8 +65,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void InactiveClearsCacheSoFocusResets()
-        {
+        public void InactiveClearsCacheSoFocusResets() {
             object a = new object(),
                 b = new object();
             var overlay = new RefOverlay(OverlayId.Inventory);
@@ -97,8 +88,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void SleepingPreservesCache()
-        {
+        public void SleepingPreservesCache() {
             object a = new object(),
                 b = new object();
             var overlay = new RefOverlay(OverlayId.Inventory);
@@ -125,8 +115,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void SwitchingActiveIdClearsOldCache()
-        {
+        public void SwitchingActiveIdClearsOldCache() {
             object a = new object(),
                 b = new object();
             var inv = new RefOverlay(OverlayId.Inventory);

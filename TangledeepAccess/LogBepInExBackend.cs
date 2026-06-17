@@ -1,14 +1,12 @@
 using BepInEx.Logging;
 using TangledeepAccess.Util;
 
-namespace TangledeepAccess
-{
+namespace TangledeepAccess {
     /// <summary>
     /// Routes the Core <see cref="Log"/> seam to the BepInEx logger. Installed in
     /// Awake so even the earliest setup is captured in BepInEx\LogOutput.log.
     /// </summary>
-    internal sealed class LogBepInExBackend : Log.ISink
-    {
+    internal sealed class LogBepInExBackend : Log.ISink {
         private readonly ManualLogSource _log;
 
         private LogBepInExBackend(ManualLogSource log) => _log = log;

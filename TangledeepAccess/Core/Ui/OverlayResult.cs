@@ -1,7 +1,5 @@
-namespace TangledeepAccess.Ui
-{
-    public enum OverlayResultKind
-    {
+namespace TangledeepAccess.Ui {
+    public enum OverlayResultKind {
         /// <summary>This handler is not driving a GUI right now.</summary>
         Inactive,
 
@@ -20,8 +18,7 @@ namespace TangledeepAccess.Ui
     /// build (data not ready) returns Sleeping so its focus cache is preserved — returning
     /// Inactive instead would clear it and lose the player's position.
     /// </summary>
-    public sealed class OverlayResult
-    {
+    public sealed class OverlayResult {
         public OverlayResultKind Kind { get; private set; }
 
         /// <summary>Valid for Sleeping and Active.</summary>
@@ -31,20 +28,16 @@ namespace TangledeepAccess.Ui
         public IUiOverlay Overlay { get; private set; }
 
         /// <summary>Shared inactive sentinel; handlers may also return null to mean inactive.</summary>
-        public static readonly OverlayResult Inactive = new OverlayResult
-        {
+        public static readonly OverlayResult Inactive = new OverlayResult {
             Kind = OverlayResultKind.Inactive,
         };
 
-        public static OverlayResult Sleeping(OverlayId id)
-        {
+        public static OverlayResult Sleeping(OverlayId id) {
             return new OverlayResult { Kind = OverlayResultKind.Sleeping, Id = id };
         }
 
-        public static OverlayResult Active(IUiOverlay overlay)
-        {
-            return new OverlayResult
-            {
+        public static OverlayResult Active(IUiOverlay overlay) {
+            return new OverlayResult {
                 Kind = OverlayResultKind.Active,
                 Id = overlay.Id,
                 Overlay = overlay,

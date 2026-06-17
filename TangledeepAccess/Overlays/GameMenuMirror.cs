@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using TangledeepAccess.Ui;
 using TangledeepAccess.Ui.Graph;
 
-namespace TangledeepAccess.Overlays
-{
+namespace TangledeepAccess.Overlays {
     /// <summary>
     /// Mirrors the game's legacy menu graph into our overlay tree. Starting from the focused
     /// control, it walks Tangledeep's 8-direction <c>UIObject.neighbors</c> graph (orthogonal
@@ -14,8 +13,7 @@ namespace TangledeepAccess.Overlays
     /// differently (raw widget text for the generic fallback, structured data for a bespoke
     /// screen).
     /// </summary>
-    internal static class GameMenuMirror
-    {
+    internal static class GameMenuMirror {
         // The game's UIObject.neighbors is an 8-slot compass; we mirror the orthogonals.
         private const int NeighborUp = 0;
         private const int NeighborRight = 2;
@@ -30,21 +28,22 @@ namespace TangledeepAccess.Overlays
         public static void Build(
             IOverlayBuilder builder,
             Func<UIManagerScript.UIObject, string> labelProvider
-        )
-        {
+        ) {
             UIManagerScript.UIObject focus = UIManagerScript.uiObjectFocus;
-            if (focus == null)
+            if (focus == null) {
                 return;
+            }
 
             var seen = new HashSet<UIManagerScript.UIObject>();
             var order = new List<UIManagerScript.UIObject>();
             var queue = new Queue<UIManagerScript.UIObject>();
             queue.Enqueue(focus);
-            while (queue.Count > 0)
-            {
+            while (queue.Count > 0) {
                 UIManagerScript.UIObject uo = queue.Dequeue();
-                if (uo == null || !seen.Add(uo))
+                if (uo == null || !seen.Add(uo)) {
                     continue;
+                }
+
                 order.Add(uo);
                 Enqueue(queue, uo, NeighborUp);
                 Enqueue(queue, uo, NeighborRight);
@@ -52,25 +51,22 @@ namespace TangledeepAccess.Overlays
                 Enqueue(queue, uo, NeighborLeft);
             }
 
-            foreach (UIManagerScript.UIObject uo in order)
-            {
+            foreach (UIManagerScript.UIObject uo in order) {
                 UIManagerScript.UIObject captured = uo;
                 builder.AddNode(
                     ControlId.ForObject(uo),
-                    new NodeVtable
-                    {
-                        Label = ctx =>
-                        {
+                    new NodeVtable {
+                        Label = ctx => {
                             string label = labelProvider(captured);
-                            if (!string.IsNullOrEmpty(label))
+                            if (!string.IsNullOrEmpty(label)) {
                                 ctx.Message.Fragment(label);
+                            }
                         },
                     }
                 );
             }
 
-            foreach (UIManagerScript.UIObject uo in order)
-            {
+            foreach (UIManagerScript.UIObject uo in order) {
                 Connect(builder, seen, uo, NeighborUp, GraphDir.Up);
                 Connect(builder, seen, uo, NeighborRight, GraphDir.Right);
                 Connect(builder, seen, uo, NeighborDown, GraphDir.Down);
@@ -86,11 +82,11 @@ namespace TangledeepAccess.Overlays
             Queue<UIManagerScript.UIObject> queue,
             UIManagerScript.UIObject uo,
             int slot
-        )
-        {
+        ) {
             UIManagerScript.UIObject neighbor = NeighborAt(uo, slot);
-            if (neighbor != null)
+            if (neighbor != null) {
                 queue.Enqueue(neighbor);
+            }
         }
 
         private static void Connect(
@@ -99,15 +95,14 @@ namespace TangledeepAccess.Overlays
             UIManagerScript.UIObject from,
             int slot,
             GraphDir dir
-        )
-        {
+        ) {
             UIManagerScript.UIObject to = NeighborAt(from, slot);
-            if (to != null && built.Contains(to))
+            if (to != null && built.Contains(to)) {
                 builder.Connect(ControlId.ForObject(from), dir, ControlId.ForObject(to));
+            }
         }
 
-        private static UIManagerScript.UIObject NeighborAt(UIManagerScript.UIObject uo, int slot)
-        {
+        private static UIManagerScript.UIObject NeighborAt(UIManagerScript.UIObject uo, int slot) {
             UIManagerScript.UIObject[] neighbors = uo.neighbors;
             return neighbors != null && slot < neighbors.Length ? neighbors[slot] : null;
         }

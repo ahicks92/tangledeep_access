@@ -1,7 +1,6 @@
 using HarmonyLib;
 
-namespace TangledeepAccess.Patches
-{
+namespace TangledeepAccess.Patches {
     /// <summary>
     /// The universal focus chokepoint: every menu (title, dialogs, shop, hotbar, options,
     /// character creation, and the inventory/equipment/skills columns) routes focus changes
@@ -11,10 +10,8 @@ namespace TangledeepAccess.Patches
     /// with processEvent: false) is covered too.
     /// </summary>
     [HarmonyPatch(typeof(UIManagerScript), "ChangeUIFocus")]
-    internal static class UIManagerScript_ChangeUIFocus_Patch
-    {
-        private static void Postfix(UIManagerScript.UIObject obj)
-        {
+    internal static class UIManagerScript_ChangeUIFocus_Patch {
+        private static void Postfix(UIManagerScript.UIObject obj) {
             UiRuntime.Dispatcher?.RecordGameFocus(obj);
         }
     }

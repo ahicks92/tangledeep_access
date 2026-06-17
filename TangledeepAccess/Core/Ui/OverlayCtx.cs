@@ -1,10 +1,8 @@
 using TangledeepAccess.Speech;
 
-namespace TangledeepAccess.Ui
-{
+namespace TangledeepAccess.Ui {
     /// <summary>Keyboard modifier state for an interaction. Garbage but non-null for non-key events.</summary>
-    public struct Modifiers
-    {
+    public struct Modifiers {
         public bool Control;
         public bool Alt;
         public bool Shift;
@@ -16,8 +14,7 @@ namespace TangledeepAccess.Ui
     /// Operations a control callback can perform on the owning graph. Supplied by the
     /// graph engine; do not construct directly. Kept minimal — grows as behaviors land.
     /// </summary>
-    public interface IOverlayController
-    {
+    public interface IOverlayController {
         /// <summary>Close this overlay (the dispatcher drops its focus cache).</summary>
         void Close();
 
@@ -34,16 +31,14 @@ namespace TangledeepAccess.Ui
     /// here touches Unity — concrete overlays supply callbacks that read game state, but
     /// the framework only invokes them.
     /// </summary>
-    public sealed class OverlayCtx
-    {
+    public sealed class OverlayCtx {
         public MessageBuilder Message { get; }
         public Modifiers Modifiers { get; }
 
         /// <summary>Set by the engine before invoking callbacks; may be null in bare tests.</summary>
         public IOverlayController Controller { get; internal set; }
 
-        public OverlayCtx(MessageBuilder message, Modifiers modifiers)
-        {
+        public OverlayCtx(MessageBuilder message, Modifiers modifiers) {
             Message = message;
             Modifiers = modifiers;
         }

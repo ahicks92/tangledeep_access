@@ -61,9 +61,26 @@ A logged failure is actionable; a silent one is invisible.
 - **Build output** for every project goes to a single repo-root `artifacts/` folder
   (`UseArtifactsOutput` in `Directory.Build.props`), NOT per-project `bin`/`obj`. The
   plugin DLL lands at `artifacts/bin/TangledeepAccess/release/TangledeepAccess.dll`.
-- **Formatting:** CSharpier, pinned as a local tool (`.config/dotnet-tools.json`;
-  `dotnet tool restore` once). `dotnet csharpier format .` to format, `... check .` to
-  verify. 4 spaces, 100 cols (`.csharpierrc.json`). It also formats csproj/props XML.
+- **Formatting:** Roslyn's `dotnet format` (ships with the SDK), driven by
+  `.editorconfig`. Style is **one-true-brace (1TBS)**: every opening brace cuddles onto
+  its construct's line, `else`/`catch`/`finally` cuddle onto the closing brace, and
+  single-statement blocks always get braces (IDE0011). 4-space indent. CSharpier was
+  dropped — it is Allman-only and cannot emit 1TBS. Note `dotnet format` does NOT reflow
+  long lines to a column width the way CSharpier did.
+  - Format the whole tree: `dotnet format TangledeepAccess.sln`. This is the normal
+    command and is safe — verified idempotent on the converted tree, and adding new
+    braceless code then re-formatting solution-wide applies braces cleanly.
+  - Rare escape hatch: the `Core/**` sources are `<Compile Include>`-linked into both
+    the net472 plugin and the net8 test project. `dotnet format` formats a linked file
+    once per project and, *if the two project contexts ever compute different output for
+    it*, writes git conflict markers (`>>>>>>> After`) into the file instead of
+    overwriting. This bit once during the initial cold Allman→1TBS bulk conversion and
+    was not reproducible afterward. If you ever see those markers after a format,
+    `git checkout` the `.cs` files and format **per project** instead:
+    `dotnet format TangledeepAccess/TangledeepAccess.csproj` (covers all plugin + Core
+    files once), then
+    `dotnet format TangledeepAccess.Tests/TangledeepAccess.Tests.csproj --include TangledeepAccess.Tests/`
+    (test-own files only, leaving the already-formatted linked Core files untouched).
 
 ## Architecture
 

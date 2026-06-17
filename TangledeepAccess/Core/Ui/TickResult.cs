@@ -1,12 +1,10 @@
-namespace TangledeepAccess.Ui
-{
+namespace TangledeepAccess.Ui {
     /// <summary>
     /// What one <see cref="OverlayDispatcher.Tick"/> produced for the glue to act on. The
     /// dispatcher is BCL-only, so it cannot speak, play sounds, or move the game's focus
     /// itself; it returns this and the (Unity-aware) caller does so on the main thread.
     /// </summary>
-    public sealed class TickResult
-    {
+    public sealed class TickResult {
         /// <summary>Text to speak this tick, or null/empty.</summary>
         public string Speak;
 

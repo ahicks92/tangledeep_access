@@ -1,5 +1,4 @@
-namespace TangledeepAccess.Ui
-{
+namespace TangledeepAccess.Ui {
     /// <summary>
     /// Identifies a logical overlay. A mod-side superset of the game's menus: the first
     /// block mirrors Tangledeep's own UIs (so a handler can claim "I am the inventory");
@@ -10,8 +9,7 @@ namespace TangledeepAccess.Ui
     /// Only the ids needed now are defined; extend as overlays are written. Keep this the
     /// single source of cache identity (do not invent ad-hoc string ids elsewhere).
     /// </summary>
-    public enum OverlayId
-    {
+    public enum OverlayId {
         // The bottom-of-stack fallback: mirrors the game's current legacy UIObject neighbor
         // graph as a tree and follows the game's focus. Subsumes the old FocusAnnouncer.
         GenericGameFocus,

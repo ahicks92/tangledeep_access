@@ -2,13 +2,10 @@ using System.Collections.Generic;
 using TangledeepAccess.Ui;
 using Xunit;
 
-namespace TangledeepAccess.Tests.Ui
-{
-    public class ControlIdTests
-    {
+namespace TangledeepAccess.Tests.Ui {
+    public class ControlIdTests {
         [Fact]
-        public void StructuralEqualityIgnoresReference()
-        {
+        public void StructuralEqualityIgnoresReference() {
             var a = ControlId.Referenced(new object(), "k");
             var b = ControlId.Referenced(new object(), "k");
             Assert.Equal(a, b);
@@ -16,14 +13,12 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void DifferentStructuralKeysAreNotEqual()
-        {
+        public void DifferentStructuralKeysAreNotEqual() {
             Assert.NotEqual(ControlId.Structural("a"), ControlId.Structural("b"));
         }
 
         [Fact]
-        public void ReferenceMatchesIsIdentityOnly()
-        {
+        public void ReferenceMatchesIsIdentityOnly() {
             var obj = new object();
             var id = ControlId.Referenced(obj, "k");
             Assert.True(id.ReferenceMatches(obj));
@@ -32,8 +27,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void ForObjectUsesObjectAsBothTiers()
-        {
+        public void ForObjectUsesObjectAsBothTiers() {
             var obj = new object();
             var id = ControlId.ForObject(obj);
             Assert.True(id.ReferenceMatches(obj));
@@ -42,8 +36,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void UsableAsDictionaryKeyByStructuralIdentity()
-        {
+        public void UsableAsDictionaryKeyByStructuralIdentity() {
             var dict = new Dictionary<ControlId, int>();
             dict[ControlId.Referenced(new object(), "k")] = 1;
             // A different instance with the same structural key resolves the same slot.
@@ -52,8 +45,7 @@ namespace TangledeepAccess.Tests.Ui
         }
 
         [Fact]
-        public void CompositeStructuralKeysWork()
-        {
+        public void CompositeStructuralKeysWork() {
             var a = ControlId.Structural(("slot", 3));
             var b = ControlId.Structural(("slot", 3));
             var c = ControlId.Structural(("slot", 4));

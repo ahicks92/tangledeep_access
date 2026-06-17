@@ -1,16 +1,14 @@
 using System;
 using TangledeepAccess.Ui.Graph;
 
-namespace TangledeepAccess.Ui
-{
+namespace TangledeepAccess.Ui {
     /// <summary>
     /// A spoken overlay over some game (or mod) UI. <see cref="Build"/> declares the
     /// overlay's controls into the builder every tick; the framework reconciles focus and
     /// throws the tree away. Capture live state in the control callbacks — never cache the
     /// built tree. An overlay's <see cref="Id"/> keys its focus cache.
     /// </summary>
-    public interface IUiOverlay
-    {
+    public interface IUiOverlay {
         OverlayId Id { get; }
 
         void Build(IOverlayBuilder builder);
@@ -29,8 +27,7 @@ namespace TangledeepAccess.Ui
     /// <paramref name="rowKey"/> to two rows for column navigation (up/down preserves the
     /// position within the row). This is sugar that the builder lowers to the raw graph.</para>
     /// </summary>
-    public interface IOverlayBuilder
-    {
+    public interface IOverlayBuilder {
         // --- Raw graph API ---
 
         /// <summary>Add a control node with a full vtable.</summary>

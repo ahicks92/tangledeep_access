@@ -3,8 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using TangledeepAccess.Util;
 
-namespace TangledeepAccess.Native
-{
+namespace TangledeepAccess.Native {
     /// <summary>
     /// Preloads native DLLs by absolute path before any P/Invoke runs.
     ///
@@ -17,8 +16,7 @@ namespace TangledeepAccess.Native
     /// NVDA controller, are statically linked; verified against its import table),
     /// so nothing else needs preloading.
     /// </summary>
-    public static class NativeLoader
-    {
+    public static class NativeLoader {
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr LoadLibraryW(string lpFileName);
 
@@ -26,22 +24,20 @@ namespace TangledeepAccess.Native
         /// Preload the vendored Prism runtime from <paramref name="directory"/>
         /// (the folder holding the plugin DLL). Returns true if prism.dll loaded.
         /// </summary>
-        public static bool LoadPrism(string directory)
-        {
+        public static bool LoadPrism(string directory) {
             return Preload(Path.Combine(directory, "prism.dll"), required: true);
         }
 
-        private static bool Preload(string path, bool required)
-        {
-            if (!File.Exists(path))
-            {
-                if (required)
+        private static bool Preload(string path, bool required) {
+            if (!File.Exists(path)) {
+                if (required) {
                     Log.Error("native: missing " + path);
+                }
+
                 return false;
             }
             var handle = LoadLibraryW(path);
-            if (handle == IntPtr.Zero)
-            {
+            if (handle == IntPtr.Zero) {
                 int err = Marshal.GetLastWin32Error();
                 Log.Error("native: LoadLibrary failed (" + err + ") for " + path);
                 return false;

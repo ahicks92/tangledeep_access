@@ -35,9 +35,6 @@ and is never committed.
 ## Build, install, run
 
 ```powershell
-# One-time: restore the pinned local tools (CSharpier).
-dotnet tool restore
-
 # One-time: install BepInEx into the game folder.
 .\setup-bepinex.ps1
 
@@ -47,8 +44,8 @@ dotnet tool restore
 # Run the offline tests.
 .\test.ps1
 
-# Format all C# (and csproj/props) before committing.
-dotnet csharpier format .
+# Format all C# to one-true-brace style (Roslyn, driven by .editorconfig).
+dotnet format TangledeepAccess.sln
 ```
 
 All three scripts auto-locate the Steam install of Tangledeep; override with the
