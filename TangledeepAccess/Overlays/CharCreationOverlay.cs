@@ -50,7 +50,14 @@ namespace TangledeepAccess.Overlays {
         /// </summary>
         public OverlayResult Handler() {
             bool jobGrid = CharCreation.creationActive && FocusedJobIndex() >= 0;
-            return jobGrid || UIManagerScript.nameInputOpen
+            // Title-screen feat select only, so a stale CreateStage can never shadow an in-game
+            // dialog (the same guard SaveSlotOverlay uses).
+            bool onTitle = GameMasterScript.gmsSingleton != null
+                && GameMasterScript.gmsSingleton.titleScreenGMS;
+            bool featSelect = onTitle
+                && TitleScreenScript.CreateStage == CreationStages.PERKSELECT
+                && UIManagerScript.dialogBoxOpen;
+            return jobGrid || UIManagerScript.nameInputOpen || featSelect
                 ? OverlayResult.Active(this)
                 : OverlayResult.Inactive;
         }
@@ -61,8 +68,48 @@ namespace TangledeepAccess.Overlays {
                 return;
             }
 
+            if (TitleScreenScript.CreateStage == CreationStages.PERKSELECT) {
+                BuildFeatSelect(builder);
+                return;
+            }
+
             UIManagerScript.UIObject[] buttons = CharCreation.jobButtons;
             GameMenuMirror.Build(builder, uo => JobLabel(uo, buttons));
+        }
+
+        // --- Feat select ---
+
+        private static void BuildFeatSelect(IOverlayBuilder builder) {
+            // Announce the instruction ("Select two feats...") once; it is dialog body text
+            // with no focusable control, like the other dialog bodies.
+            string body = DialogBody();
+            if (body != null) {
+                builder.Announce(body, ctx => ctx.Message.Fragment(body));
+            }
+
+            // The feat buttons are dialog UIObjects in the normal neighbor graph. Mirror them
+            // like the generic fallback, but read name + description from the ButtonCombo (the
+            // generic reader sees only the header/name), plus the toggled selection state.
+            GameMenuMirror.Build(builder, FeatLabel);
+        }
+
+        private static string FeatLabel(UIManagerScript.UIObject uo) {
+            ButtonCombo button = uo.button;
+            if (button == null) {
+                return GameLabelReader.ReadLabel(uo);
+            }
+
+            string name = GameLabelReader.Clean(button.headerText);
+            string desc = GameLabelReader.Clean(button.buttonText);
+            string text = name != null && desc != null ? name + ". " + desc : name ?? desc;
+            // A feat already chosen reads as selected so the player can track their two picks.
+            return button.toggled ? "selected, " + text : text;
+        }
+
+        private static string DialogBody() {
+            DialogBoxScript dbs = UIManagerScript.myDialogBoxComponent;
+            TMPro.TextMeshProUGUI text = dbs != null ? dbs.GetDialogText() : null;
+            return text != null ? GameLabelReader.Clean(text.text) : null;
         }
 
         // --- Name entry ---
