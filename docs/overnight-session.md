@@ -45,8 +45,9 @@ this session and documented in `CLAUDE.md`.
 ## Known gaps / next (in rough priority)
 
 - **Shops / NPC interaction** not yet verified end-to-end (talk → buy). NPC dialogue should
-  read via DialogOverlay; shop item lists may need checking.
-- **Status names** are cleaned refNames, not localized; find the game's status-name source.
+  read via DialogOverlay; shop item lists may need a hook. Blocked on driving in-game
+  movement over HTTP (the dev `/input` only covers menu nav), so it could not be exercised
+  in the safe town — verifying this is the top morning task.
 - **Custom name typing** in creation is deferred (default + RANDOM suffice).
 - Terrain is the coarse tile type ("ground"/"water"/"wall").
 
