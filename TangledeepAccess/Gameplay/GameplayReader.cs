@@ -67,12 +67,23 @@ namespace TangledeepAccess.Gameplay {
             message.ListItem("Energy " + Bar(stats, StatTypes.ENERGY));
             message.ListItem("Level " + stats.GetLevel());
 
-            foreach (StatusEffect status in stats.GetStatuses()) {
-                // Only HUD-visible statuses (temporary effects), not the permanent job/feat
-                // passives, which would otherwise be read every time.
-                if (status.showIcon) {
-                    message.ListItem((status.isPositive ? "" : "bad: ") + StatusName(status));
+            foreach (StatusEffect status in stats.GetAllStatuses()) {
+                // Match the game's own status-bar filter: HUD-visible, non-passive effects only,
+                // so the permanent job/feat passives are not read every time.
+                if (!status.showIcon || status.passiveAbility) {
+                    continue;
                 }
+
+                string name = GameLabelReader.Clean(status.abilityName);
+                if (name == null) {
+                    continue;
+                }
+
+                // Temporary effects carry a turn count; permanent ones do not.
+                string duration = status.CheckDurTriggerOn(StatusTrigger.PERMANENT)
+                    ? ""
+                    : " " + status.curDuration + " turns";
+                message.ListItem((status.isPositive ? "" : "bad: ") + name + duration);
             }
         }
 
@@ -80,17 +91,6 @@ namespace TangledeepAccess.Gameplay {
             int cur = (int)stats.GetStat(stat, StatDataTypes.CUR);
             int max = (int)stats.GetStat(stat, StatDataTypes.MAX);
             return cur + " of " + max;
-        }
-
-        // The game has no friendly status name at the refName key, so clean the ref itself
-        // ("status_toughness" -> "toughness"). A localized name can replace this when found.
-        private static string StatusName(StatusEffect status) {
-            string r = status.refName ?? "effect";
-            if (r.StartsWith("status_")) {
-                r = r.Substring("status_".Length);
-            }
-
-            return r.Replace('_', ' ');
         }
 
         // --- Read here ---
