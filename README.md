@@ -5,11 +5,11 @@ to make the turn-based roguelike fully playable without vision. Speech is the
 primary interface, via [Prism](https://github.com/ethindp/prism) (a unified
 screen-reader/TTS abstraction) through a hand-written P/Invoke binding.
 
-Status: **early gameplay.** The full new-game flow is playable by ear — title menu,
-save-slot selection, the story intros, job selection, feat selection, and name entry
-all speak — and the mod drops you into the game and reads turn events, tiles, and a
-line-of-sight scan. See **Features** and **Controls** below; architecture notes are in
-`docs/`.
+Status: **playable.** The full new-game flow speaks (title, save slots, story intros, job /
+feat / name screens), and in-game the mod reads the turn log, tiles, a line-of-sight scan,
+status, hotbar, full-screen panels, shops/NPCs, and ranged targeting — verified end to end
+through descending into the dungeon and fighting a monster. See **Features** and
+**Controls** below; architecture notes are in `docs/`.
 
 ## Features
 
@@ -56,7 +56,9 @@ speaks them.
   cursor — each tile is read, respecting line of sight — and **Home** re-centers it on the
   hero; press `;` again to turn it off.
 
-(More gameplay controls — targeting support, a Factorio-style rescan refinement — are planned.)
+Ranged targeting, shops/NPCs, movement feedback, and health warnings have no hotkey — they
+speak automatically as you play. During character creation and in menus, navigate with the
+game's own keys; the mod reads each control as focus moves.
 
 ## Layout
 
