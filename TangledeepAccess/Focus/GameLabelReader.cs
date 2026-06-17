@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using TMPro;
 using UnityEngine;
 
@@ -39,13 +40,26 @@ namespace TangledeepAccess.Focus {
             return Clean(raw);
         }
 
-        /// <summary>Strip TMP color/markup tags and trim; null/empty in returns null.</summary>
+        // Any remaining TMP rich-text tag after color stripping (<size>, <sprite>, <b>, ...).
+        // The game's StripColors removes only <color>/<#...>, so multi-section readouts keep
+        // their size/sprite tags; strip them all for clean speech.
+        private static readonly Regex AnyTag = new Regex("<[^>]+>", RegexOptions.Compiled);
+
+        // Runs of whitespace, including the "\n\n" section breaks in tooltip readouts.
+        private static readonly Regex WhitespaceRun = new Regex("\\s+", RegexOptions.Compiled);
+
+        /// <summary>
+        /// Normalize raw game text to a spoken string: strip color tags (game stripper), then
+        /// any other TMP markup, then collapse all whitespace (incl. newlines) to single
+        /// spaces. Null/empty in (or all-markup) returns null.
+        /// </summary>
         public static string Clean(string raw) {
             if (string.IsNullOrEmpty(raw)) {
                 return null;
             }
 
-            string cleaned = CustomAlgorithms.StripColors(raw).Trim();
+            string cleaned = AnyTag.Replace(CustomAlgorithms.StripColors(raw), "");
+            cleaned = WhitespaceRun.Replace(cleaned, " ").Trim();
             return string.IsNullOrEmpty(cleaned) ? null : cleaned;
         }
     }
