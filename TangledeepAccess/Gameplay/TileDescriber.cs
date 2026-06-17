@@ -33,9 +33,49 @@ namespace TangledeepAccess.Gameplay {
             AppendItems(message, tile);
         }
 
-        /// <summary>The coarse tile type, spoken lowercase ("ground", "water", "wall").</summary>
+        /// <summary>
+        /// A spoken terrain name. Hazard/feature location tags (lava, water, mud, ...) take
+        /// priority over the coarse <c>tileType</c> because water and lava tiles are often
+        /// <c>GROUND</c>-typed yet matter a great deal to a player who cannot see them.
+        /// </summary>
         public static string Terrain(MapTileData tile) {
+            if (tile.CheckTag(LocationTags.LAVA)) {
+                return "lava";
+            }
+            if (tile.CheckTag(LocationTags.WATER) || tile.CheckTag(LocationTags.ISLANDSWATER)) {
+                return "water";
+            }
+            if (tile.CheckTag(LocationTags.MUD) || tile.CheckTag(LocationTags.SUMMONEDMUD)) {
+                return "mud";
+            }
+            if (tile.CheckTag(LocationTags.ELECTRIC)) {
+                return "electrified";
+            }
+            if (tile.CheckTag(LocationTags.LASER)) {
+                return "laser";
+            }
+            if (tile.CheckTag(LocationTags.TREE)) {
+                return "tree";
+            }
+            if (tile.CheckTag(LocationTags.GRASS) || tile.CheckTag(LocationTags.GRASS2)) {
+                return "grass";
+            }
+
             return tile.tileType.ToString().ToLowerInvariant().Replace('_', ' ');
+        }
+
+        /// <summary>
+        /// True for terrain a walking player should be warned about underfoot (the damaging or
+        /// movement-affecting tags), so movement feedback can speak it even on a GROUND tile.
+        /// </summary>
+        public static bool IsHazard(MapTileData tile) {
+            return tile.CheckTag(LocationTags.LAVA)
+                || tile.CheckTag(LocationTags.WATER)
+                || tile.CheckTag(LocationTags.ISLANDSWATER)
+                || tile.CheckTag(LocationTags.MUD)
+                || tile.CheckTag(LocationTags.SUMMONEDMUD)
+                || tile.CheckTag(LocationTags.ELECTRIC)
+                || tile.CheckTag(LocationTags.LASER);
         }
 
         private static void AppendItems(MessageBuilder message, MapTileData tile) {

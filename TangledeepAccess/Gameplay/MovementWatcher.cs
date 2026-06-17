@@ -50,8 +50,9 @@ namespace TangledeepAccess.Gameplay {
             var message = new MessageBuilder();
             bool notable = false;
 
-            // Terrain only when it is not plain ground (water, lava, a bridge, ...).
-            if (tile.tileType != TileTypes.GROUND) {
+            // Terrain when it is not plain ground, OR a hazard tag on a ground-typed tile
+            // (water/lava/mud/electric/laser often ride a GROUND tile yet matter a lot).
+            if (tile.tileType != TileTypes.GROUND || TileDescriber.IsHazard(tile)) {
                 message.Fragment(TileDescriber.Terrain(tile));
                 notable = true;
             }
