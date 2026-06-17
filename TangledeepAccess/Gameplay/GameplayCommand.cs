@@ -15,6 +15,9 @@ namespace TangledeepAccess.Gameplay {
         /// <summary>Read the hero's vitals: health, stamina, energy, level, active effects.</summary>
         ReadStatus,
 
+        /// <summary>Read the active hotbar page's bound abilities/items by slot.</summary>
+        ReadHotbar,
+
         /// <summary>Repeat the last spoken phrase (handled in the pump, which holds the speech).</summary>
         RepeatLast,
 

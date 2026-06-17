@@ -44,6 +44,7 @@ speaks them.
 - `L` — **Scan**: everything in line of sight, by direction and distance (hostiles first,
   then nearest).
 - `Y` — **Status**: the hero's health, stamina, energy, level, and active (temporary) effects.
+- `A` — **Hotbar**: the abilities/items bound to the active hotbar page, by slot number.
 - `'` (apostrophe) — **Repeat**: re-speak the last phrase (e.g. a combat line you missed).
 - `;` — **Look cursor**: toggle a tile cursor for examining the map without moving. While
   it is on, the **arrow keys** (and the **numpad**, including diagonals 7/9/1/3) step the

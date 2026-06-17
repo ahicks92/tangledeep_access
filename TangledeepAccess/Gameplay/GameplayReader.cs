@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using HarmonyLib;
 using TangledeepAccess.Focus;
 using TangledeepAccess.Speech;
 using UnityEngine;
@@ -53,9 +54,63 @@ namespace TangledeepAccess.Gameplay {
                 case GameplayCommand.ReadStatus:
                     ReadStatus(message, hero);
                     break;
+                case GameplayCommand.ReadHotbar:
+                    ReadHotbar(message);
+                    break;
             }
 
             return message.Build();
+        }
+
+        // --- Hotbar ---
+
+        // The active hotbar page index is a private static on UIManagerScript; slots are
+        // page*8 + 0..7 into the flat hotbarAbilities array.
+        private static readonly AccessTools.FieldRef<int> ActiveHotbarPage =
+            AccessTools.StaticFieldRefAccess<int>(AccessTools.Field(typeof(UIManagerScript), "indexOfActiveHotbar"));
+
+        private static void ReadHotbar(MessageBuilder message) {
+            HotbarBindable[] hb = UIManagerScript.hotbarAbilities;
+            message.Fragment("Hotbar");
+            if (hb == null) {
+                message.Fragment("unavailable");
+                return;
+            }
+
+            int page = ActiveHotbarPage();
+            bool any = false;
+            for (int i = 0; i < 8; i++) {
+                int idx = page * 8 + i;
+                if (idx >= hb.Length) {
+                    break;
+                }
+
+                string name = HotbarSlotName(hb[idx]);
+                if (name != null) {
+                    message.ListItem((i + 1) + ", " + name);
+                    any = true;
+                }
+            }
+
+            if (!any) {
+                message.Fragment("empty");
+            }
+        }
+
+        private static string HotbarSlotName(HotbarBindable slot) {
+            if (slot == null) {
+                return null;
+            }
+
+            if (slot.actionType == HotbarBindableActions.ABILITY && slot.ability != null) {
+                return GameLabelReader.Clean(slot.ability.GetNameForUI());
+            }
+
+            if (slot.actionType == HotbarBindableActions.CONSUMABLE && slot.consume != null) {
+                return GameLabelReader.Clean(slot.consume.GetNameForUI());
+            }
+
+            return null;
         }
 
         // --- Status ---

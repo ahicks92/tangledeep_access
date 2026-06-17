@@ -64,6 +64,10 @@ namespace TangledeepAccess.Patches {
                 return GameplayCommand.RepeatLast;
             }
 
+            if (Input.GetKeyDown(KeyCode.A)) {
+                return GameplayCommand.ReadHotbar;
+            }
+
             if (Input.GetKeyDown(KeyCode.Semicolon)) {
                 return GameplayCommand.LookToggle;
             }
