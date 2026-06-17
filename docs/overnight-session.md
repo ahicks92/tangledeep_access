@@ -19,8 +19,9 @@ title screen into gameplay:
   filtered by the game's own line-of-sight and verbose settings.
 - **Spatial awareness** controls (keys chosen to not collide with the game):
   - `K` read-here, `L` scan (LOS sweep by direction/distance), `Y` status (HP/stamina/
-    energy/level/effects), `;` look cursor (8-directional via arrows + numpad, Home
-    re-centers, LOS-respecting), `'` repeat last phrase.
+    energy/level/effects with real names + durations), `A` hotbar (bound abilities by slot),
+    `;` look cursor (8-directional via arrows + numpad, Home re-centers, LOS-respecting),
+    `'` repeat last phrase.
   - Stepping onto an item or hazardous terrain is announced automatically (plain ground is
     silent).
 - **Full-screen panels** (inventory/equipment/skills/character sheet) speak the selected
