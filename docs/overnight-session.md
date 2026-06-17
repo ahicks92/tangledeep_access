@@ -10,15 +10,19 @@ Starting from a mod that only spoke a startup line, the game is playable by ear 
 title screen into gameplay:
 
 - **Title / save-slot / character creation** all speak. The new-game story intros, the
-  image-only job buttons (full job readout derived and spoken), feat names, and the
-  name-entry screen (prompt + current name + job/mode/feats; RANDOM re-reads) are audible.
+  image-only job buttons (full job readout derived and spoken), feats (name + description +
+  which two are selected), and the name-entry screen (prompt + current name + job/mode/feats;
+  RANDOM re-reads) are audible.
 - **Modal dialogs** read their full body text, then choices — via a new one-shot
   "announcement" channel in the overlay framework (reusable for tutorials, level-ups).
 - **In gameplay** the turn-by-turn log is spoken (combat, status, pickups, NPC barks),
   filtered by the game's own line-of-sight and verbose settings.
 - **Spatial awareness** controls (keys chosen to not collide with the game):
   - `K` read-here, `L` scan (LOS sweep by direction/distance), `Y` status (HP/stamina/
-    energy/level/effects), `;` look cursor (arrow-stepped tile examiner, Home re-centers).
+    energy/level/effects), `;` look cursor (8-directional via arrows + numpad, Home
+    re-centers, LOS-respecting).
+  - Stepping onto an item or hazardous terrain is announced automatically (plain ground is
+    silent).
 
 ## How to try it
 
@@ -36,13 +40,18 @@ this session and documented in `CLAUDE.md`.
 
 ## Known gaps / next (in rough priority)
 
-- **Feat descriptions** on the PERKSELECT screen (only feat names read today). Needs
-  `CharCreation` to handle PERKSELECT and outrank the dialog overlay for that stage.
-- **Look cursor** is 4-directional; numpad diagonals are an easy add.
-- **Ranged targeting** (`PlayerInputTargetingManager`) has no spoken support yet.
+- **Ranged targeting** (`PlayerInputTargetingManager`) has no spoken support yet — the
+  next big gameplay piece; hard to test in the safe town (no monsters / maybe no ranged
+  weapon), which is why it is not done yet.
+- **Full-screen panels** (inventory / equipment / skills / character sheet) use the newer
+  `ImpactUI` column model, not the legacy `uiObjectFocus` graph the generic mirror walks,
+  so they likely read poorly — a column-aware overlay is the other big area.
 - **Status names** are cleaned refNames, not localized; find the game's status-name source.
 - **Custom name typing** in creation is deferred (default + RANDOM suffice).
 - Terrain is the coarse tile type ("ground"/"water"/"wall").
+
+Done since the first checkpoint: feat descriptions + selection state, 8-directional look
+cursor, and movement auto-announce.
 
 ## Notes / decisions worth your eye
 
