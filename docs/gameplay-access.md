@@ -79,6 +79,17 @@ The mod's first gameplay controls are on-demand **spatial queries** (`GameplayRe
   `activeMap.actorsInMap`; ground items from a visible-tile scan; both gated on
   `visibleTilesArray`. Pickups that exist as both an actor and a tile item are de-duped by
   name and tile.
+- **Look cursor (`;`)** — a discrete tile cursor for examining the map without moving the
+  hero. Toggling centers it on the hero; while active the input layer captures the arrow
+  keys to step it (Home re-centers), reading each tile via the shared `TileDescriber`. The
+  game's native Examine Mode is a smooth analog free-cursor (an icon nudged by a delta), so
+  it does not map to arrow-key tile stepping — hence the mod's own integer cursor. A visible
+  tile is fully described; an out-of-sight tile reads "not visible" plus its direction, so
+  the cursor never reveals the unseen.
+
+Tile contents are produced by `TileDescriber`, shared between read-here and the look
+cursor: it leans on the game's `HoverInfoScript.GetHoverText` for the actor/feature on a
+tile (empty for bare ground) and falls back to the tile type plus ground items.
 
 Direction math is a pure, unit-tested Core helper (`GridDirection`) in the game's
 `+x`-east / `+y`-north convention (verified from `MapMasterScript.xDirections`): component
@@ -98,6 +109,7 @@ keeps all game-state reads and speech on the main-thread pump and out of Harmony
 - Feat descriptions on the PERKSELECT screen are not yet read (only feat names) — see the
   task list. Feats are a dialog, so this needs `CharCreation` to handle PERKSELECT and
   outrank `DialogOverlay` for that stage.
-- No look/examine cursor yet (arrow-driven tile-by-tile exploration) and no targeting
-  support; both are planned and will reuse `GridDirection` and the gameplay input layer.
+- The look cursor is 4-directional (orthogonal arrows); numpad diagonals are a natural
+  add. No targeting support yet (ranged abilities); planned, will reuse `GridDirection`
+  and the gameplay input layer.
 - Custom name typing is deferred; the default name plus RANDOM make the screen completable.

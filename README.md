@@ -35,8 +35,11 @@ speaks them.
 - `K` — **Read here**: the hero's tile — map, coordinates, terrain, and any items on it.
 - `L` — **Scan**: everything in line of sight, by direction and distance (hostiles first,
   then nearest).
+- `;` — **Look cursor**: toggle a tile cursor for examining the map without moving. While
+  it is on, the **arrow keys** step the cursor (each tile is read, respecting line of
+  sight) and **Home** re-centers it on the hero; press `;` again to turn it off.
 
-(More gameplay controls — a look/examine cursor, targeting support — are planned.)
+(More gameplay controls — targeting support, a Factorio-style rescan refinement — are planned.)
 
 ## Layout
 
