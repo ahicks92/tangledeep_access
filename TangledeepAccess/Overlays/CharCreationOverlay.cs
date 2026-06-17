@@ -1,46 +1,115 @@
 using System;
+using System.Collections.Generic;
 using HarmonyLib;
 using TangledeepAccess.Focus;
 using TangledeepAccess.Ui;
+using TMPro;
 
 namespace TangledeepAccess.Overlays {
     /// <summary>
-    /// Speaks Tangledeep's character-creation job-selection grid. The job buttons are
-    /// image-only (an <c>Animatable</c> walk sprite, no TMP text), so the generic fallback
-    /// reads nothing — the description lives in a separate label the game fills in only as a
-    /// side effect of hovering. This overlay instead derives each job's text itself, the way
-    /// the game would: <c>jobEnumOrder[i]</c> → job enum → <c>GetFullJobReadout</c> (pure
-    /// synchronous string assembly, available the instant focus lands), or the locked-job
-    /// string when the job is not yet unlocked.
+    /// Speaks the character-creation screens whose controls the generic fallback cannot read.
+    /// Two are handled today:
     ///
-    /// <para>Scope: only the job grid (detected by the focused control being a job button), so
-    /// the other creation stages stay on the generic mirror / dialog overlay until each gets
-    /// its own handling. The button graph is mirrored exactly as the generic fallback does;
-    /// only the label provider differs. See docs/new-game-menu.md.</para>
+    /// <para><b>Job grid</b> — the job buttons are image-only (an <c>Animatable</c> walk sprite,
+    /// no TMP text), so each label is derived the way the game would: <c>jobEnumOrder[i]</c> →
+    /// job enum → <c>GetFullJobReadout</c> (pure synchronous string assembly), or the locked-job
+    /// string when not yet unlocked. The button graph is mirrored exactly like the generic
+    /// fallback; only the label provider differs.</para>
+    ///
+    /// <para><b>Name entry</b> — the prompt, the current name value, and the job/mode/feats
+    /// summary are on-screen labels with no focusable control, so they ride the one-shot
+    /// announcement channel (keyed by the name, so RANDOM re-announces the new name). The
+    /// CONFIRM / RANDOM buttons are mirrored like any other menu. Custom typing into the field
+    /// is a later enhancement — the default name plus RANDOM make the screen completable now.</para>
+    ///
+    /// Other creation stages (feat select, difficulty mods) stay on the generic mirror / dialog
+    /// overlay until each gets its own handling. See docs/new-game-menu.md.
     /// </summary>
     internal sealed class CharCreationOverlay : IUiOverlay {
         // jobEnumOrder maps a button slot to a CharacterJobs enum value; it is private static.
         private static readonly AccessTools.FieldRef<int[]> JobEnumOrder =
             AccessTools.StaticFieldRefAccess<int[]>(AccessTools.Field(typeof(CharCreation), "jobEnumOrder"));
 
+        // Name-entry summary labels: private instance fields on CharCreation.
+        private static readonly AccessTools.FieldRef<CharCreation, TextMeshProUGUI> LabelTitle =
+            AccessTools.FieldRefAccess<CharCreation, TextMeshProUGUI>("label_title");
+        private static readonly AccessTools.FieldRef<CharCreation, TextMeshProUGUI> LabelJobName =
+            AccessTools.FieldRefAccess<CharCreation, TextMeshProUGUI>("label_job_name");
+        private static readonly AccessTools.FieldRef<CharCreation, TextMeshProUGUI> LabelDifficulty =
+            AccessTools.FieldRefAccess<CharCreation, TextMeshProUGUI>("label_difficulty");
+        private static readonly AccessTools.FieldRef<CharCreation, List<TextMeshProUGUI>> LabelFeats =
+            AccessTools.FieldRefAccess<CharCreation, List<TextMeshProUGUI>>("label_feats");
+
         public OverlayId Id => OverlayId.CharCreation;
 
         /// <summary>
-        /// Active while character creation is showing the job grid: creation is live and the
-        /// focused control is one of the job buttons. Keying off the focused button (rather
-        /// than a stage flag) scopes us precisely to the grid and naturally cedes to the dialog
-        /// overlay when an intro/prompt dialog is up.
+        /// Active on the two screens we specialize: the job grid (creation live and the focused
+        /// control is a job button) and name entry (<c>nameInputOpen</c>). Keying the job case
+        /// off the focused button scopes us to the grid and cedes to the dialog overlay when an
+        /// intro/prompt dialog is up.
         /// </summary>
         public OverlayResult Handler() {
-            return CharCreation.creationActive && FocusedJobIndex() >= 0
+            bool jobGrid = CharCreation.creationActive && FocusedJobIndex() >= 0;
+            return jobGrid || UIManagerScript.nameInputOpen
                 ? OverlayResult.Active(this)
                 : OverlayResult.Inactive;
         }
 
         public void Build(IOverlayBuilder builder) {
+            if (UIManagerScript.nameInputOpen) {
+                BuildNameEntry(builder);
+                return;
+            }
+
             UIManagerScript.UIObject[] buttons = CharCreation.jobButtons;
             GameMenuMirror.Build(builder, uo => JobLabel(uo, buttons));
         }
+
+        // --- Name entry ---
+
+        private static void BuildNameEntry(IOverlayBuilder builder) {
+            string name = CharCreation.nameInputTextBox != null
+                ? GameLabelReader.Clean(CharCreation.nameInputTextBox.text)
+                : null;
+
+            // Prompt + name + summary appear without a focus move, so announce them; key by the
+            // name so picking a RANDOM name re-reads the screen with the new name.
+            CharCreation cc = CharCreation.singleton;
+            builder.Announce(name ?? "", ctx => {
+                ctx.Message.Fragment(Read(LabelTitle(cc))); // "What is our heroine's name?"
+                ctx.Message.ListItem(name);
+                ctx.Message.ListItem(Read(LabelJobName(cc)));
+                ctx.Message.ListItem(Read(LabelDifficulty(cc)));
+                AppendFeats(ctx.Message, cc);
+            });
+
+            // The CONFIRM / RANDOM buttons use the normal focus model; mirror them.
+            if (UIManagerScript.uiObjectFocus != null) {
+                GameMenuMirror.Build(builder, GameLabelReader.ReadLabel);
+            } else if (name != null) {
+                builder.AddLabel(ControlId.Structural("nameentry"), ctx => { });
+            }
+        }
+
+        private static void AppendFeats(Speech.MessageBuilder message, CharCreation cc) {
+            List<TextMeshProUGUI> feats = cc != null ? LabelFeats(cc) : null;
+            if (feats == null) {
+                return;
+            }
+
+            foreach (TextMeshProUGUI feat in feats) {
+                string text = Read(feat);
+                if (text != null) {
+                    message.ListItem(text);
+                }
+            }
+        }
+
+        private static string Read(TextMeshProUGUI label) {
+            return label != null ? GameLabelReader.Clean(label.text) : null;
+        }
+
+        // --- Job grid ---
 
         /// <summary>The spoken text for one job button: its full readout, or the locked string.</summary>
         private static string JobLabel(UIManagerScript.UIObject uo, UIManagerScript.UIObject[] buttons) {
