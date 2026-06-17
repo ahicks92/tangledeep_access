@@ -8,6 +8,11 @@
         <RootNamespace>TangledeepAccess</RootNamespace>
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 
+        <!-- Copy NuGet runtime assemblies (Mono.CSharp, used by the dev eval server)
+         into the build output so build.ps1 can deploy them next to the plugin. The
+         game/BepInEx HintPath references are Private=false and stay excluded. -->
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+
         <!-- Game install root. Override with the TANGLEDEEP_GAME environment variable
          (MSBuild surfaces env vars as properties); falls back to the default Steam
          location. Game/Unity assemblies are referenced from here. -->
@@ -26,6 +31,9 @@
             Version="1.0.3"
             PrivateAssets="all"
         />
+        <!-- In-process C# REPL for the dev eval server (Dev/). Shipped beside the
+         plugin only via build.ps1, not part of the player-facing feature set. -->
+        <PackageReference Include="Mono.CSharp" Version="4.0.0.143" />
     </ItemGroup>
 
     <!-- Generate the Plugin.PluginVersion constant from <Version> (Directory.Build.props)

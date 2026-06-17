@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using BepInEx;
 using HarmonyLib;
+using TangledeepAccess.Dev;
 using TangledeepAccess.Native;
 using TangledeepAccess.Overlays;
 using TangledeepAccess.Speech;
@@ -26,6 +27,7 @@ namespace TangledeepAccess {
         private PrismSpeech _speech;
         private Harmony _harmony;
         private OverlayDispatcher _dispatcher;
+        private readonly DevServer _devServer = new DevServer();
 
         private void Awake() {
             LogBepInExBackend.Install(Logger);
@@ -53,9 +55,15 @@ namespace TangledeepAccess {
             } catch (Exception e) {
                 Log.Error("Harmony patch failed: " + e);
             }
+
+            // Dev driver (eval + speech tap). No-op unless TANGLEDEEP_DEV=1.
+            _devServer.Start();
         }
 
         private void Update() {
+            // Run any queued dev eval jobs on the main thread (no-op when disabled).
+            _devServer.Pump();
+
             // Single per-frame pump. The input hook (TDInputHandler prefix) stashes a nav
             // command; we apply it through the dispatcher, then carry out the game-side
             // effects it asks for. Speaking and game calls stay here, never in a Harmony hook.

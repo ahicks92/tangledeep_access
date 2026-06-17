@@ -12,6 +12,15 @@ namespace TangledeepAccess.Speech {
     /// NativeLoader), otherwise the first P/Invoke throws DllNotFoundException.
     /// </summary>
     public sealed class PrismSpeech : IDisposable {
+        /// <summary>
+        /// Optional tap invoked with every non-empty string sent to speech. The dev
+        /// server sets this to capture spoken text for read-back (it can't hear TTS).
+        /// Null in normal play. Kept here because Speak is the single speech chokepoint.
+        /// </summary>
+#pragma warning disable CS0649 // assigned in the plugin build (Dev/DevServer), not in the test build
+        internal static Action<string> Observer;
+#pragma warning restore CS0649
+
         private IntPtr _ctx;
         private IntPtr _backend;
 
@@ -81,6 +90,8 @@ namespace TangledeepAccess.Speech {
             if (!Available || string.IsNullOrEmpty(text)) {
                 return;
             }
+
+            Observer?.Invoke(text);
 
             var err = PrismNative.prism_backend_output(
                 _backend,

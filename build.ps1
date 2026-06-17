@@ -86,5 +86,16 @@ Write-Host "Deployed TangledeepAccess.dll to $Dest" -ForegroundColor Green
 Copy-Item "$PSScriptRoot\third_party\prism\prism.dll" "$Dest\prism.dll" -Force
 Write-Host "Deployed Prism native runtime to $Dest" -ForegroundColor Green
 
+# Mono.CSharp backs the dev eval server (Dev/). It only does anything when the mod
+# is launched with TANGLEDEEP_DEV=1 (see run-game.ps1), but the assembly must be
+# present for the plugin to load, so deploy it alongside.
+$MonoCSharp = "$BuildDir\Mono.CSharp.dll"
+if (Test-Path $MonoCSharp) {
+    Copy-Item $MonoCSharp "$Dest\Mono.CSharp.dll" -Force
+    Write-Host "Deployed Mono.CSharp.dll (dev eval) to $Dest" -ForegroundColor Green
+} else {
+    Write-Host "WARNING: Mono.CSharp.dll not found at $MonoCSharp (dev eval will fail to load)" -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host "Done. Launch Tangledeep and listen for the startup line." -ForegroundColor Cyan

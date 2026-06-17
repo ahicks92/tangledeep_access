@@ -52,8 +52,12 @@ Get-Process -Name Tangledeep -ErrorAction SilentlyContinue | ForEach-Object {
     $_ | Stop-Process -Force
 }
 
+# Enable the in-process dev server (eval + speech tap) for this launch. Inherited
+# by the child process; absent in a normal play launch so no socket is opened.
+$env:TANGLEDEEP_DEV = "1"
+
 $proc = Start-Process -FilePath $Exe -WorkingDirectory $Game -PassThru
-Write-Host "Launched Tangledeep (PID $($proc.Id)). Blocking until it exits..." -ForegroundColor Cyan
+Write-Host "Launched Tangledeep (PID $($proc.Id)), dev server on http://127.0.0.1:8770. Blocking until it exits..." -ForegroundColor Cyan
 
 try {
     $proc.WaitForExit()
