@@ -100,7 +100,10 @@ unbound (`controls.md`) so they never shadow a game action. Most resolve through
   game's native Examine Mode is a smooth analog free-cursor (an icon nudged by a delta), so
   it does not map to arrow-key tile stepping — hence the mod's own integer cursor. A visible
   tile is fully described; an out-of-sight tile reads "not visible" plus its direction, so
-  the cursor never reveals the unseen.
+  the cursor never reveals the unseen. `]` / `[` jump it to the next / previous visible
+  point of interest (nearest-first, wrapping) via `Surroundings.CollectVisible` — the shared
+  visible-actor + ground-item collector the scanner also uses — for a quick tour without
+  stepping tile by tile.
 
 Tile contents are produced by `TileDescriber`, shared between read-here and the look
 cursor: it leans on the game's `HoverInfoScript.GetHoverText` for the actor/feature on a
