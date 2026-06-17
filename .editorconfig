@@ -2,7 +2,9 @@ root = true
 
 [*]
 charset = utf-8
-end_of_line = crlf
+# LF to match git's canonical form here (core.autocrlf=input stores LF). crlf made
+# `dotnet format` rewrite files with CRLF that git then flagged as phantom-modified.
+end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
 indent_style = space
