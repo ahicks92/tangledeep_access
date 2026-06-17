@@ -26,6 +26,15 @@ namespace TangledeepAccess.Patches {
                     return false;
                 }
 
+                // While the look cursor is active, the player is examining, not acting: suppress
+                // ALL game input every frame, not just on the key-down frame. Otherwise a held
+                // movement key passes through on its repeat frames and the game walks the hero
+                // alongside the cursor (the cursor and hero move together, so the offset never
+                // changes — "1 west, 1 west"). Exit look mode with ; to act again.
+                if (LookCursor.Active) {
+                    return false;
+                }
+
                 return true; // no menu, no mod key — game handles movement/actions
             }
 
