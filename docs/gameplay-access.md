@@ -2,8 +2,10 @@
 
 How the mod makes Tangledeep audible, and why it is built this way. Companion docs:
 `ui-framework.md` (the game's menu internals), `new-game-menu.md` (creation research),
-`input-flow.md`, `controls.md`. Written 2026-06-17; covers the overlay-framework
-additions and the first gameplay reads.
+`input-flow.md`, `controls.md`. Written 2026-06-17; kept current as features land — now
+covers the full menu/creation/dialog overlays, the turn log, all gameplay reads (tile,
+scan, status, hotbar, look cursor, exits, repeat), ranged targeting, shops, and the passive
+movement/health announcements.
 
 ## The overlay stack and priority
 
@@ -15,16 +17,19 @@ high (`Plugin.Awake`):
 
 1. `GenericGameFocusOverlay` — the fallback. Mirrors whatever legacy `UIObject` graph the
    game currently has focus in and reads each control's raw widget text. Covers any screen
-   without a bespoke overlay.
-2. `CharCreationOverlay` — the job grid and name-entry screen (controls the generic reader
-   cannot read: image-only job buttons; label-only name summary).
-3. `DialogOverlay` — the modal dialog box. Above the per-screen overlays because a dialog
-   is modal: when one is open it owns the screen, including over character creation (whose
-   intros are themselves dialogs).
-4. `SaveSlotOverlay` — the title save-slot screen. Above `DialogOverlay` because that
-   screen is *built on* a dialog box (its header is dialog text) yet wants the bespoke slot
-   reader; it only claims its exact stage and cedes to `DialogOverlay` the instant a real
-   confirmation pops (which moves `CreateStage` off `SELECTSLOT`).
+   without a bespoke overlay (including the shop and most full-screen panels' button names).
+2. `DialogOverlay` — the modal dialog box (NPC dialogue, story intros, yes/no prompts).
+   Above the generic mirror because a dialog is modal. Reads the body via the announcement
+   channel, then the choices.
+3. `CharCreationOverlay` — the title-screen creation screens the generic/dialog readers
+   handle poorly: the job grid (image-only buttons → full job readout), feat select (a
+   dialog, so it outranks `DialogOverlay` for the `PERKSELECT` stage and reads each feat's
+   name + description + selected state), and name entry (prompt + name + job/mode/feats
+   summary). Gated to `titleScreenGMS` so it never claims in-game screens.
+4. `SaveSlotOverlay` — the title save-slot screen. Highest because that screen is *built on*
+   a dialog box (its header is dialog text) yet wants the bespoke slot reader; it only claims
+   its exact stage and cedes to the others the instant a real confirmation pops (which moves
+   `CreateStage` off `SELECTSLOT`).
 
 The ordering rule that keeps this sane: **an overlay should claim only the screens it
 truly specializes**, so a higher-priority overlay going inactive cleanly reveals the one
@@ -71,14 +76,24 @@ menu navigation.
 
 ## Gameplay reads (tile reading, scanner) and the input model
 
-The mod's first gameplay controls are on-demand **spatial queries** (`GameplayReader`):
+On-demand gameplay queries are mod hotkeys, chosen from keys the Default layout leaves
+unbound (`controls.md`) so they never shadow a game action. Most resolve through
+`GameplayReader`:
 
-- **Read here (`K`)** — the hero's tile: map name, coordinates, terrain type, ground items.
+- **Read here (`K`)** — the hero's tile: map name, coordinates, terrain type, ground items,
+  and the walkable "exits" (the 8 neighbors that are not a wall/solid/blocked actor, via
+  `MapTileData.IsCollidable`).
 - **Scan (`L`)** — a Factorio-Access-style sweep of everything in line of sight, by
   direction and distance, hostiles first then nearest. Actors come from
   `activeMap.actorsInMap`; ground items from a visible-tile scan; both gated on
   `visibleTilesArray`. Pickups that exist as both an actor and a tile item are de-duped by
   name and tile.
+- **Status (`Y`)** — health/stamina/energy (current of max), level, and active effects
+  (the game's own status-bar filter: `showIcon && !passiveAbility`, named by `abilityName`
+  with a turn count).
+- **Hotbar (`A`)** — the active hotbar page's bound abilities/items by slot.
+- **Repeat (`'`)** — re-speaks `PrismSpeech.LastSpoken` (handled in the pump, which owns the
+  speech instance).
 - **Look cursor (`;`)** — a discrete tile cursor for examining the map without moving the
   hero. Toggling centers it on the hero; while active the input layer captures the arrow
   keys to step it (Home re-centers), reading each tile via the shared `TileDescriber`. The
@@ -95,12 +110,13 @@ Direction math is a pure, unit-tested Core helper (`GridDirection`) in the game'
 `+x`-east / `+y`-north convention (verified from `MapMasterScript.xDirections`): component
 offsets ("2 north, 3 east"), an 8-way compass, and Chebyshev step counts.
 
-**Input model.** In gameplay the mod's input patch acts only when no menu is open, reads
-its hotkeys (`K`/`L`), and consumes that frame. The keys are unbound in the game's Default
-layout (`controls.md`), so consuming them shadows nothing. The hook only *requests* a
-command (`UiRuntime.SetPendingGameplay`); the pump runs it through `GameplayReader` and
-speaks — the same hook-requests / pump-executes split used for menu nav and the log, which
-keeps all game-state reads and speech on the main-thread pump and out of Harmony hooks.
+**Input model.** In gameplay the mod's input patch acts only when no menu is open, reads its
+hotkeys (`K` `L` `Y` `A` `'` `;`, plus arrows/numpad/Home while the look cursor is active),
+and consumes that frame. The keys are unbound in the game's Default layout (`controls.md`),
+so consuming them shadows nothing. The hook only *requests* a command
+(`UiRuntime.SetPendingGameplay`); the pump runs it through `GameplayReader` and speaks — the
+same hook-requests / pump-executes split used for menu nav and the log, which keeps all
+game-state reads and speech on the main-thread pump and out of Harmony hooks.
 
 ## Full-screen panels (inventory / equipment / skills / character sheet)
 
@@ -118,13 +134,47 @@ arrow navigation, and this is a pure announce-on-change like the game log.
 Note: the game leaves `nameInputOpen`/`CreateStage` set after a game starts, so the
 character-creation overlay is gated to `titleScreenGMS` to avoid it shadowing in-game screens.
 
+## Ranged targeting
+
+`PlayerInputTargetingManager.UpdateCurrentTargetingInformation(location, isGoodTile)` fires
+as the aim cursor moves while targeting a ranged weapon or point/area ability. A postfix
+hands the tile to `TargetingReader`, which the pump speaks: tile contents (shared
+`TileDescriber`), direction/distance from the hero, and valid/invalid. Deduped by tile.
+
+## Shops
+
+The shop is a legacy `uiObjectFocus` screen, so the generic overlay already voices each item
+button's name. A postfix on `ShopUIScript.ShowItemInfo` reads the rank/rarity/description and
+gold cost the game renders into `shopItemInfoText` (ending "COST: Ng") into `PanelReader`.
+The name stays with the generic overlay (the info text leads with the rank, so no double).
+
+## Passive announcements (pump-polled, no input)
+
+- **Movement** (`MovementWatcher`) — when the hero's tile changes, speaks ground items or
+  non-ground terrain; plain ground is silent so walking is quiet.
+- **Health** (`HealthWatcher`) — warns on crossing below half then a quarter health, each
+  once, re-arming on recovery; interrupts (survival in a permadeath game).
+
+## Speech channels summary
+
+Every game-state read and all speech happen on the per-frame pump (`Plugin.Update`); Harmony
+hooks only set flags / enqueue. The pump drains, in order: the overlay dispatcher (menu
+focus), the gameplay-query result, targeting, panel selection, the game log (`interrupt:
+false`), then movement and health watchers. Interrupting channels (menu/query/targeting/
+panel/health) cut current speech for responsiveness; the log does not, so a multi-event turn
+stays whole. In practice at most one input-driven channel fires per frame.
+
+## In-game movement for testing
+
+The dev `/input` endpoint drives the hero over HTTP (`step <dir>`, `wait`, `stairs`,
+`pickup`) by committing a `TurnData` through `GameMasterScript.TryNextTurn`, the same path a
+keyboard step takes — the game resolves move/attack/NPC-interaction. This is how the town
+interaction loop and dungeon combat were verified without a screen reader. See `CLAUDE.md`.
+
 ## Known gaps / next
 
 - Tile terrain is the coarse `tileType` ("ground", "water", "wall"); a friendlier localized
-  name can replace it.
-- Feat descriptions on the PERKSELECT screen are not yet read (only feat names) — see the
-  task list. Feats are a dialog, so this needs `CharCreation` to handle PERKSELECT and
-  outrank `DialogOverlay` for that stage.
-- No targeting support yet (ranged abilities); planned, will reuse `GridDirection` and the
-  gameplay input layer.
-- Custom name typing is deferred; the default name plus RANDOM make the screen completable.
+  name and trap/hazard detail could replace it.
+- Inventory item *actions* (use/equip/drop from the panel) read but are not verified end to
+  end. Custom name typing in creation is deferred (default + RANDOM suffice).
+- Status names use the game's `abilityName`; a few exotic effects may still read tersely.
