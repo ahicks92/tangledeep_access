@@ -20,9 +20,13 @@ title screen into gameplay:
 - **Spatial awareness** controls (keys chosen to not collide with the game):
   - `K` read-here, `L` scan (LOS sweep by direction/distance), `Y` status (HP/stamina/
     energy/level/effects), `;` look cursor (8-directional via arrows + numpad, Home
-    re-centers, LOS-respecting).
+    re-centers, LOS-respecting), `'` repeat last phrase.
   - Stepping onto an item or hazardous terrain is announced automatically (plain ground is
     silent).
+- **Full-screen panels** (inventory/equipment/skills/character sheet) speak the selected
+  item/ability name + full tooltip, via a hook on the ImpactUI column model.
+- **Ranged targeting** reads the target tile (contents, direction/distance, valid/invalid)
+  as the aim cursor moves.
 
 ## How to try it
 
@@ -40,16 +44,16 @@ this session and documented in `CLAUDE.md`.
 
 ## Known gaps / next (in rough priority)
 
-- **Ranged targeting** (`PlayerInputTargetingManager`) has no spoken support yet — the
-  next big gameplay piece; hard to test in the safe town (no monsters / maybe no ranged
-  weapon), which is why it is not done yet.
+- **Shops / NPC interaction** not yet verified end-to-end (talk → buy). NPC dialogue should
+  read via DialogOverlay; shop item lists may need checking.
 - **Status names** are cleaned refNames, not localized; find the game's status-name source.
 - **Custom name typing** in creation is deferred (default + RANDOM suffice).
 - Terrain is the coarse tile type ("ground"/"water"/"wall").
 
 Done since the first checkpoint: feat descriptions + selection state, 8-directional look
 cursor, movement auto-announce, full-screen panel reading (inventory/equipment/skills/char
-sheet via the ImpactUI column hook), and a title-screen gating fix for the creation overlay.
+sheet via the ImpactUI column hook), a title-screen gating fix for the creation overlay,
+ranged-targeting readout, and a repeat-last-phrase key.
 
 ## Notes / decisions worth your eye
 
