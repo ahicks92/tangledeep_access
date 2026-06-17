@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using HarmonyLib;
 using TangledeepAccess.Focus;
 using TangledeepAccess.Ui;
@@ -7,52 +6,46 @@ using TMPro;
 
 namespace TangledeepAccess.Overlays {
     /// <summary>
-    /// Speaks the character-creation screens whose controls the generic fallback cannot read.
-    /// Two are handled today:
+    /// Speaks the character-creation screens the generic fallback cannot read. Each is a small
+    /// overlay; the title-input hook lets the owned ones drive their own navigation.
     ///
-    /// <para><b>Job grid</b> — the job buttons are image-only (an <c>Animatable</c> walk sprite,
-    /// no TMP text), so each label is derived the way the game would: <c>jobEnumOrder[i]</c> →
-    /// job enum → <c>GetFullJobReadout</c> (pure synchronous string assembly), or the locked-job
-    /// string when not yet unlocked. The button graph is mirrored exactly like the generic
-    /// fallback; only the label provider differs.</para>
+    /// <para><b>Job grid</b> — image-only buttons, so each label is derived like the game would
+    /// (<c>jobEnumOrder[i]</c> → <c>GetFullJobReadout</c>); the button graph is mirrored, only the
+    /// label provider differs. Passive (the game drives grid nav).</para>
     ///
-    /// <para><b>Name entry</b> — the prompt, the current name value, and the job/mode/feats
-    /// summary are on-screen labels with no focusable control, so they ride the one-shot
-    /// announcement channel (keyed by the name, so RANDOM re-announces the new name). The
-    /// CONFIRM / RANDOM buttons are mirrored like any other menu. Custom typing into the field
-    /// is a later enhancement — the default name plus RANDOM make the screen completable now.</para>
+    /// <para><b>Feat select</b> — dialog buttons; mirrored with name + description from the
+    /// ButtonCombo and the toggled state. Passive.</para>
     ///
-    /// Other creation stages (feat select, difficulty mods) stay on the generic mirror / dialog
-    /// overlay until each gets its own handling. See docs/new-game-menu.md.
+    /// <para><b>Name entry</b> and <b>the ready/begin screen</b> — these are NOT in the UIObject
+    /// focus graph (a focused text field and an integer-indexed option list), which is why the
+    /// generic mirror reads nothing. We model them as owned virtual controls: real nodes whose
+    /// labels read the live field value / option text and whose <c>OnClick</c> calls the game's
+    /// own action directly (the Core dispatcher just invokes the delegate, so a node can drive
+    /// game code). Custom name/seed typing is deferred — RANDOM and the default name complete the
+    /// screen — but the value is always read.</para>
+    ///
+    /// See docs/new-game-menu.md.
     /// </summary>
     internal sealed class CharCreationOverlay : IUiOverlay {
         // jobEnumOrder maps a button slot to a CharacterJobs enum value; it is private static.
         private static readonly AccessTools.FieldRef<int[]> JobEnumOrder =
             AccessTools.StaticFieldRefAccess<int[]>(AccessTools.Field(typeof(CharCreation), "jobEnumOrder"));
 
-        // Name-entry summary labels: private instance fields on CharCreation.
-        private static readonly AccessTools.FieldRef<CharCreation, TextMeshProUGUI> LabelTitle =
-            AccessTools.FieldRefAccess<CharCreation, TextMeshProUGUI>("label_title");
-        private static readonly AccessTools.FieldRef<CharCreation, TextMeshProUGUI> LabelJobName =
-            AccessTools.FieldRefAccess<CharCreation, TextMeshProUGUI>("label_job_name");
-        private static readonly AccessTools.FieldRef<CharCreation, TextMeshProUGUI> LabelDifficulty =
-            AccessTools.FieldRefAccess<CharCreation, TextMeshProUGUI>("label_difficulty");
-        private static readonly AccessTools.FieldRef<CharCreation, List<TextMeshProUGUI>> LabelFeats =
-            AccessTools.FieldRefAccess<CharCreation, List<TextMeshProUGUI>>("label_feats");
+        // Ready-screen option labels: private instance fields on CharCreation.
+        private static readonly AccessTools.FieldRef<CharCreation, TextMeshProUGUI> LabelBeginGame =
+            AccessTools.FieldRefAccess<CharCreation, TextMeshProUGUI>("label_begin_game");
+        private static readonly AccessTools.FieldRef<CharCreation, TextMeshProUGUI> LabelGoBack =
+            AccessTools.FieldRefAccess<CharCreation, TextMeshProUGUI>("label_go_back");
 
         public OverlayId Id => OverlayId.CharCreation;
 
         /// <summary>
-        /// Active on the two screens we specialize: the job grid (creation live and the focused
-        /// control is a job button) and name entry (<c>nameInputOpen</c>). Keying the job case
-        /// off the focused button scopes us to the grid and cedes to the dialog overlay when an
-        /// intro/prompt dialog is up.
+        /// Active on the screens we specialize: the job grid (creation live, a job button
+        /// focused), feat select (PERKSELECT dialog), and the name/ready screens (NAMEINPUT).
+        /// Gated to the title-screen flow — the game leaves nameInputOpen/CreateStage set after a
+        /// game starts, so without this the name branch would shadow in-game screens.
         /// </summary>
         public OverlayResult Handler() {
-            // Gate the whole overlay to the title-screen creation flow. The game leaves
-            // nameInputOpen true and CreateStage at NAMEINPUT after a game starts, so without
-            // this guard the name-entry branch would wrongly claim every in-game screen and
-            // shadow the generic overlay. (In-game job/feat respec is a separate future case.)
             bool onTitle = GameMasterScript.gmsSingleton != null
                 && GameMasterScript.gmsSingleton.titleScreenGMS;
             if (!onTitle) {
@@ -62,14 +55,20 @@ namespace TangledeepAccess.Overlays {
             bool jobGrid = CharCreation.creationActive && FocusedJobIndex() >= 0;
             bool featSelect = TitleScreenScript.CreateStage == CreationStages.PERKSELECT
                 && UIManagerScript.dialogBoxOpen;
-            return jobGrid || UIManagerScript.nameInputOpen || featSelect
+            return jobGrid || IsNameFlow() || featSelect
                 ? OverlayResult.Active(this)
                 : OverlayResult.Inactive;
         }
 
         public void Build(IOverlayBuilder builder) {
-            if (UIManagerScript.nameInputOpen) {
-                BuildNameEntry(builder);
+            if (IsNameFlow()) {
+                if (CharCreation.NameEntryScreenState
+                    == ENameEntryScreenState.name_confirmed_and_ready_to_go) {
+                    BuildReadyScreen(builder);
+                } else {
+                    BuildNameEntry(builder);
+                }
+
                 return;
             }
 
@@ -80,6 +79,77 @@ namespace TangledeepAccess.Overlays {
 
             UIManagerScript.UIObject[] buttons = CharCreation.jobButtons;
             GameMenuMirror.Build(builder, uo => JobLabel(uo, buttons));
+        }
+
+        // The name and ready screens both live in the NAMEINPUT stage (distinguished by
+        // NameEntryScreenState); nameInputOpen alone can lag, so accept either signal.
+        private static bool IsNameFlow() {
+            return UIManagerScript.nameInputOpen
+                || TitleScreenScript.CreateStage == CreationStages.NAMEINPUT;
+        }
+
+        // --- Name entry (owned virtual control) ---
+
+        private static void BuildNameEntry(IOverlayBuilder builder) {
+            string name = NameValue();
+            builder.AddLabel(
+                ControlId.Structural("name"),
+                ctx => ctx.Message.Fragment("Name, " + (name ?? "blank"))
+            );
+            builder.AddClickable(
+                ControlId.Structural("random"),
+                ctx => ctx.Message.Fragment("Random name"),
+                (ctx, mods) => {
+                    CharCreation.singleton?.GenerateRandomNameAndFillField();
+                    ctx.Message.Fragment("Random name");
+                    string fresh = NameValue();
+                    if (fresh != null) {
+                        ctx.Message.Fragment(fresh);
+                    }
+                }
+            );
+            builder.AddClickable(
+                ControlId.Structural("confirm"),
+                ctx => ctx.Message.Fragment("Confirm name"),
+                (ctx, mods) => CharCreation.singleton?.OnNameEntryBoxConfirm()
+            );
+            builder.CaptureInput();
+        }
+
+        // --- Ready / begin screen (owned virtual control) ---
+
+        // The 3-option selector (iSelectedConfirmCharacterOption 0..2): Begin / Go back / seed.
+        // Not UIObject-backed, so we drive each option's game action straight from OnClick.
+        private static void BuildReadyScreen(IOverlayBuilder builder) {
+            CharCreation cc = CharCreation.singleton;
+
+            builder.AddClickable(
+                ControlId.Structural("begin"),
+                ctx => ctx.Message.Fragment(ReadOr(LabelBeginGame(cc), "Begin game")),
+                (ctx, mods) => CharCreation.singleton?.ConfirmedAndGameIsReadyToStart()
+            );
+            builder.AddClickable(
+                ControlId.Structural("goback"),
+                ctx => ctx.Message.Fragment(ReadOr(LabelGoBack(cc), "Go back")),
+                (ctx, mods) => TitleScreenScript.ReturnToMenu()
+            );
+
+            // World seed: read-only here (typing a seed is deferred; empty means a random seed).
+            string seed = cc != null && cc.worldSeedInput != null
+                ? GameLabelReader.Clean(cc.worldSeedInput.text)
+                : null;
+            builder.AddLabel(
+                ControlId.Structural("seed"),
+                ctx => ctx.Message.Fragment("World seed, " + (seed ?? "random"))
+            );
+
+            builder.CaptureInput();
+        }
+
+        private static string NameValue() {
+            return CharCreation.nameInputTextBox != null
+                ? GameLabelReader.Clean(CharCreation.nameInputTextBox.text)
+                : null;
         }
 
         // --- Feat select ---
@@ -113,52 +183,8 @@ namespace TangledeepAccess.Overlays {
 
         private static string DialogBody() {
             DialogBoxScript dbs = UIManagerScript.myDialogBoxComponent;
-            TMPro.TextMeshProUGUI text = dbs != null ? dbs.GetDialogText() : null;
+            TextMeshProUGUI text = dbs != null ? dbs.GetDialogText() : null;
             return text != null ? GameLabelReader.Clean(text.text) : null;
-        }
-
-        // --- Name entry ---
-
-        private static void BuildNameEntry(IOverlayBuilder builder) {
-            string name = CharCreation.nameInputTextBox != null
-                ? GameLabelReader.Clean(CharCreation.nameInputTextBox.text)
-                : null;
-
-            // Prompt + name + summary appear without a focus move, so announce them; key by the
-            // name so picking a RANDOM name re-reads the screen with the new name.
-            CharCreation cc = CharCreation.singleton;
-            builder.Announce(name ?? "", ctx => {
-                ctx.Message.Fragment(Read(LabelTitle(cc))); // "What is our heroine's name?"
-                ctx.Message.ListItem(name);
-                ctx.Message.ListItem(Read(LabelJobName(cc)));
-                ctx.Message.ListItem(Read(LabelDifficulty(cc)));
-                AppendFeats(ctx.Message, cc);
-            });
-
-            // The CONFIRM / RANDOM buttons use the normal focus model; mirror them.
-            if (UIManagerScript.uiObjectFocus != null) {
-                GameMenuMirror.Build(builder, GameLabelReader.ReadLabel);
-            } else if (name != null) {
-                builder.AddLabel(ControlId.Structural("nameentry"), ctx => { });
-            }
-        }
-
-        private static void AppendFeats(Speech.MessageBuilder message, CharCreation cc) {
-            List<TextMeshProUGUI> feats = cc != null ? LabelFeats(cc) : null;
-            if (feats == null) {
-                return;
-            }
-
-            foreach (TextMeshProUGUI feat in feats) {
-                string text = Read(feat);
-                if (text != null) {
-                    message.ListItem(text);
-                }
-            }
-        }
-
-        private static string Read(TextMeshProUGUI label) {
-            return label != null ? GameLabelReader.Clean(label.text) : null;
         }
 
         // --- Job grid ---
@@ -191,6 +217,11 @@ namespace TangledeepAccess.Overlays {
             UIManagerScript.UIObject[] buttons = CharCreation.jobButtons;
             UIManagerScript.UIObject focus = UIManagerScript.uiObjectFocus;
             return buttons != null && focus != null ? Array.IndexOf(buttons, focus) : -1;
+        }
+
+        private static string ReadOr(TextMeshProUGUI label, string fallback) {
+            string text = label != null ? GameLabelReader.Clean(label.text) : null;
+            return string.IsNullOrEmpty(text) ? fallback : text;
         }
     }
 }
