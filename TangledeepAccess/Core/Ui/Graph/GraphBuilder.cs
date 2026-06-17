@@ -43,6 +43,9 @@ namespace TangledeepAccess.Ui.Graph {
         private object _announceKey;
         private Action<OverlayCtx> _announce;
 
+        // Explicit input ownership, independent of node count (orthogonal to construction style).
+        private bool _forceCapture;
+
         public IOverlayBuilder AddNode(ControlId id, NodeVtable vtable) {
             if (id == null) {
                 throw new ArgumentNullException(nameof(id));
@@ -139,6 +142,11 @@ namespace TangledeepAccess.Ui.Graph {
             return this;
         }
 
+        public IOverlayBuilder CaptureInput() {
+            _forceCapture = true;
+            return this;
+        }
+
         public IOverlayBuilder AddClickable(
             ControlId id,
             Action<OverlayCtx> label,
@@ -162,9 +170,13 @@ namespace TangledeepAccess.Ui.Graph {
             }
 
             GraphRender render = hasRaw ? BuildRaw() : BuildMenu();
-            if (render != null && _announce != null) {
-                render.AnnounceKey = _announceKey;
-                render.Announce = _announce;
+            if (render != null) {
+                if (_announce != null) {
+                    render.AnnounceKey = _announceKey;
+                    render.Announce = _announce;
+                }
+
+                render.ForceCapture = _forceCapture;
             }
 
             return render;

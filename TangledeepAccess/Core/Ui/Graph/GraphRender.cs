@@ -22,6 +22,16 @@ namespace TangledeepAccess.Ui.Graph {
 
         /// <summary>Appends the announcement text to the message. Paired with <see cref="AnnounceKey"/>.</summary>
         public System.Action<OverlayCtx> Announce;
+
+        /// <summary>
+        /// The overlay explicitly wants to own keyboard input, even with a single node. The
+        /// dispatcher's default rule captures input only for a multi-node tree (a degenerate
+        /// single node is assumed unrepresentable and left to the game); a modal control we
+        /// deliberately model as one node (e.g. a Continue dialog) sets this to claim input
+        /// anyway. Surfaced separately as the dispatcher's <c>CapturesInputExplicitly</c> so a
+        /// context-specific input hook can engage only for opted-in overlays.
+        /// </summary>
+        public bool ForceCapture;
     }
 
     /// <summary>

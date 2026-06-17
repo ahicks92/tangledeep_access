@@ -1,5 +1,6 @@
 using TangledeepAccess.Focus;
 using TangledeepAccess.Ui;
+using TangledeepAccess.Ui.Graph;
 
 namespace TangledeepAccess.Overlays {
     /// <summary>
@@ -37,16 +38,55 @@ namespace TangledeepAccess.Overlays {
                 builder.Announce(body, ctx => ctx.Message.Fragment(body));
             }
 
-            // The choices use the normal focus model; mirror them like the generic fallback.
-            // If the dialog has no focused button yet, the announcement still needs a node to
-            // ride along, so fall back to a single body node.
-            if (UIManagerScript.uiObjectFocus != null) {
+            if (IsTitleFlow()) {
+                BuildOwnedChoices(builder);
+            } else if (UIManagerScript.uiObjectFocus != null) {
+                // In-game dialogue: the choices are legacy UIObjects in the neighbor graph and
+                // the game drives navigation, so we passively mirror and follow its focus.
                 GameMenuMirror.Build(builder, GameLabelReader.ReadLabel);
             } else if (body != null) {
-                // Silent placeholder: the announcement already speaks the body; this node only
-                // exists so the announcement (which needs at least one node) can ride along.
+                // Silent placeholder so the announcement (which needs a node) can ride along
+                // when the game has not focused a button yet.
                 builder.AddLabel(ControlId.Structural("dialogbody"), ctx => { });
             }
+        }
+
+        /// <summary>
+        /// Title-screen dialogs (the new-game story intros, etc.) are pumped by
+        /// <c>TitleScreenScript.Update</c>, not the in-game input chokepoint, so we own their
+        /// input via the title hook. Build one node per actual dialog button straight from
+        /// <c>dialogUIObjects</c> — never from the (briefly stale) <c>uiObjectFocus</c>, whose
+        /// title-menu neighbors would otherwise leak in and get spoken — and claim input. The
+        /// body rides the announcement; each button is a node, so a single-Continue dialog is
+        /// one node ("body. Continue") and Enter passes the confirm through to the game.
+        /// </summary>
+        private static void BuildOwnedChoices(IOverlayBuilder builder) {
+            System.Collections.Generic.List<UIManagerScript.UIObject> choices =
+                UIManagerScript.dialogUIObjects;
+            if (choices == null) {
+                return;
+            }
+
+            foreach (UIManagerScript.UIObject choice in choices) {
+                UIManagerScript.UIObject captured = choice;
+                builder.AddItem(
+                    ControlId.ForObject(choice),
+                    new NodeVtable {
+                        Label = ctx => {
+                            string label = GameLabelReader.ReadLabel(captured);
+                            if (!string.IsNullOrEmpty(label)) {
+                                ctx.Message.Fragment(label);
+                            }
+                        },
+                    }
+                );
+            }
+
+            builder.CaptureInput();
+        }
+
+        private static bool IsTitleFlow() {
+            return GameMasterScript.gmsSingleton != null && GameMasterScript.gmsSingleton.titleScreenGMS;
         }
 
         /// <summary>The dialog's full message text, color-stripped, or null if unavailable.</summary>

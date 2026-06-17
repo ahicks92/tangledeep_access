@@ -39,6 +39,15 @@ namespace TangledeepAccess.Ui {
         /// </summary>
         public bool WantsInputCapture { get; private set; }
 
+        /// <summary>
+        /// True when the active overlay explicitly opted into owning input via
+        /// <see cref="IOverlayBuilder.CaptureInput"/> (independent of node count). A
+        /// context-specific input hook (e.g. the title-screen pump) reads this to engage only
+        /// for opted-in overlays, leaving everything else on the game's own input. Updated each
+        /// <see cref="Tick"/>; one frame stale is fine for a persistent modal.
+        /// </summary>
+        public bool CapturesInputExplicitly { get; private set; }
+
         /// <summary>Register a handler. The last one registered sits at the top of the stack.</summary>
         public void Register(OverlayHandler handler) {
             _handlers.Add(handler);
@@ -80,6 +89,7 @@ namespace TangledeepAccess.Ui {
 
             if (!hasActive || result.Kind == OverlayResultKind.Sleeping) {
                 WantsInputCapture = false;
+                CapturesInputExplicitly = false;
                 return TickResult.Empty;
             }
 
@@ -172,11 +182,14 @@ namespace TangledeepAccess.Ui {
                 _lastSpoken = null;
                 _lastAnnounceKey = null;
                 WantsInputCapture = false;
+                CapturesInputExplicitly = false;
                 return TickResult.Empty;
             }
 
-            // We capture input only for a real navigable tree, never a degenerate one.
-            WantsInputCapture = graph.Current.Nodes.Count > 1;
+            // Capture input for a real navigable tree, or whenever an overlay explicitly claims
+            // it (a single-node modal we drive ourselves, e.g. a Continue dialog).
+            CapturesInputExplicitly = graph.Current.ForceCapture;
+            WantsInputCapture = graph.Current.Nodes.Count > 1 || graph.Current.ForceCapture;
 
             // One-shot announcement: when its key changes, append the text to this tick's
             // message before the focus label, so screen content that appeared without a focus

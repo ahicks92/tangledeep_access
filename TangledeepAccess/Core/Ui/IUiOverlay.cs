@@ -70,5 +70,15 @@ namespace TangledeepAccess.Ui {
         /// it more than once per build keeps the last; needs at least one node to ride along.
         /// </summary>
         IOverlayBuilder Announce(object key, Action<OverlayCtx> text);
+
+        // --- Input ownership ---
+
+        /// <summary>
+        /// Claim keyboard input for this overlay even if it has a single node. By default the
+        /// dispatcher captures input only for a multi-node tree; a modal control modeled as one
+        /// node (e.g. a Continue dialog we drive ourselves) calls this so a context-specific
+        /// input hook engages. Surfaced as the dispatcher's <c>CapturesInputExplicitly</c>.
+        /// </summary>
+        IOverlayBuilder CaptureInput();
     }
 }

@@ -43,7 +43,7 @@ namespace TangledeepAccess.Patches {
                 return true; // a menu is open but we have nothing to drive — let the game handle it
             }
 
-            NavCommand? command = ReadNavKey();
+            NavCommand? command = MenuInput.ReadNavKey();
             if (!command.HasValue) {
                 return true; // unrecognized key — pass through to the game
             }
@@ -122,30 +122,6 @@ namespace TangledeepAccess.Patches {
                 if (Input.GetKeyDown(KeyCode.LeftBracket)) {
                     return GameplayCommand.LookPrevPoi;
                 }
-            }
-
-            return null;
-        }
-
-        private static NavCommand? ReadNavKey() {
-            if (Input.GetKeyDown(KeyCode.UpArrow)) {
-                return NavCommand.Up;
-            }
-
-            if (Input.GetKeyDown(KeyCode.DownArrow)) {
-                return NavCommand.Down;
-            }
-
-            if (Input.GetKeyDown(KeyCode.LeftArrow)) {
-                return NavCommand.Left;
-            }
-
-            if (Input.GetKeyDown(KeyCode.RightArrow)) {
-                return NavCommand.Right;
-            }
-
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) {
-                return NavCommand.Activate;
             }
 
             return null;
