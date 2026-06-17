@@ -1,14 +1,13 @@
 using HarmonyLib;
-using TangledeepAccess.Focus;
 
 namespace TangledeepAccess.Patches
 {
     /// <summary>
-    /// The universal focus chokepoint: every menu (title, dialogs, shop, hotbar,
-    /// options, and the inventory/equipment/skills columns) routes focus changes
-    /// through UIManagerScript.ChangeUIFocus. The postfix records the newly focused
-    /// element; FocusAnnouncer speaks it from the per-frame pump. The postfix runs
-    /// regardless of the method's processEvent flag, so the column path (which calls
+    /// The universal focus chokepoint: every menu (title, dialogs, shop, hotbar, options,
+    /// character creation, and the inventory/equipment/skills columns) routes focus changes
+    /// through UIManagerScript.ChangeUIFocus. The postfix only records the newly focused
+    /// element into the dispatcher; the per-frame pump (Plugin.Update) reconciles and speaks.
+    /// It runs regardless of the method's processEvent flag, so the column path (which calls
     /// with processEvent: false) is covered too.
     /// </summary>
     [HarmonyPatch(typeof(UIManagerScript), "ChangeUIFocus")]
@@ -16,7 +15,7 @@ namespace TangledeepAccess.Patches
     {
         private static void Postfix(UIManagerScript.UIObject obj)
         {
-            FocusAnnouncer.OnFocusChanged(obj);
+            UiRuntime.Dispatcher?.RecordGameFocus(obj);
         }
     }
 }

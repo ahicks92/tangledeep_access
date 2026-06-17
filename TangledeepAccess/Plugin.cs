@@ -3,10 +3,11 @@ using System.IO;
 using System.Reflection;
 using BepInEx;
 using HarmonyLib;
-using TangledeepAccess.Focus;
 using TangledeepAccess.Native;
+using TangledeepAccess.Overlays;
 using TangledeepAccess.Patches;
 using TangledeepAccess.Speech;
+using TangledeepAccess.Ui;
 using TangledeepAccess.Util;
 
 namespace TangledeepAccess
@@ -27,6 +28,7 @@ namespace TangledeepAccess
 
         private PrismSpeech _speech;
         private Harmony _harmony;
+        private OverlayDispatcher _dispatcher;
 
         private void Awake()
         {
@@ -40,7 +42,12 @@ namespace TangledeepAccess
                 _speech = new PrismSpeech();
                 _speech.Initialize();
             }
-            FocusAnnouncer.Install(_speech);
+
+            // Build the overlay system. Handlers are registered bottom-up: the generic
+            // game-focus fallback first (lowest priority), richer menu overlays later.
+            _dispatcher = new OverlayDispatcher();
+            _dispatcher.Register(new GenericGameFocusOverlay().Handler);
+            UiRuntime.Dispatcher = _dispatcher;
 
             try
             {
@@ -56,7 +63,12 @@ namespace TangledeepAccess
 
         private void Update()
         {
-            FocusAnnouncer.Pump();
+            // Single per-frame pump: the dispatcher finds the active overlay, reconciles
+            // focus (including any game-driven focus change), and returns what to speak.
+            // Speaking stays here, never in a Harmony hook.
+            string toSpeak = _dispatcher.Tick();
+            if (!string.IsNullOrEmpty(toSpeak))
+                _speech?.Speak(toSpeak);
         }
     }
 }

@@ -1,0 +1,127 @@
+using System;
+using System.Text;
+
+namespace TangledeepAccess.Speech
+{
+    /// <summary>
+    /// Fluent message accumulator, ported from Factorio Access's MessageBuilder
+    /// (scripts/speech.lua). The value it carries is the separation discipline:
+    /// consecutive <see cref="Fragment"/>s are joined with a space, and
+    /// <see cref="ListItem"/> boundaries are joined with a comma. That lets a chain
+    /// of collaborating functions each append its piece without coordinating spacing.
+    ///
+    /// Unlike the Lua original (which builds a LocalisedString), Tangledeep resolves
+    /// localized text at call time via StringManager, so this works over plain
+    /// strings. Single-use: <see cref="Build"/> throws if the builder is reused.
+    /// </summary>
+    public sealed class MessageBuilder
+    {
+        private enum State
+        {
+            // Nothing appended yet.
+            Initial,
+
+            // A list separator was just pushed; the next fragment opens a new list item.
+            ListItem,
+
+            // A fragment was just pushed (not inside a list).
+            Fragment,
+
+            // A fragment was pushed inside a list; tracks that further fragments here
+            // are space-joined, not comma-joined.
+            FragmentInList,
+
+            // build() was called; the builder is spent.
+            Built,
+        }
+
+        private readonly StringBuilder _sb = new StringBuilder();
+        private State _state = State.Initial;
+        private bool _isFirstListItem = true;
+
+        /// <summary>True if nothing has been appended yet.</summary>
+        public bool IsEmpty => _sb.Length == 0;
+
+        private void CheckNotBuilt()
+        {
+            if (_state == State.Built)
+                throw new InvalidOperationException("Attempt to use a MessageBuilder twice");
+        }
+
+        /// <summary>
+        /// Append a text fragment. Fragments are separated from preceding content by a
+        /// space; the first fragment of a fresh list item is separated by a comma first.
+        /// Null/empty fragments are ignored so optional pieces can be appended blindly.
+        /// </summary>
+        public MessageBuilder Fragment(string fragment)
+        {
+            CheckNotBuilt();
+
+            if (fragment == " ")
+                throw new ArgumentException(
+                    "Fragment(\" \") is unnecessary - spaces are added between fragments automatically"
+                );
+
+            if (string.IsNullOrEmpty(fragment))
+                return this;
+
+            // Opening a new list item: emit the comma between items (never before the first).
+            if (_state == State.ListItem)
+            {
+                if (!_isFirstListItem)
+                    _sb.Append(',');
+                _isFirstListItem = false;
+            }
+
+            _state =
+                (_state == State.ListItem || _state == State.FragmentInList)
+                    ? State.FragmentInList
+                    : State.Fragment;
+
+            // A space separates everything except the very first piece of content.
+            if (_sb.Length > 0)
+                _sb.Append(' ');
+
+            _sb.Append(fragment);
+            return this;
+        }
+
+        /// <summary>
+        /// Mark a list-item boundary; the next fragment (here or passed in) starts a new
+        /// comma-separated item. The optional fragment is appended after the boundary.
+        /// </summary>
+        public MessageBuilder ListItem(string fragment = null)
+        {
+            CheckNotBuilt();
+            _state = State.ListItem;
+            if (!string.IsNullOrEmpty(fragment))
+                Fragment(fragment);
+            return this;
+        }
+
+        /// <summary>
+        /// Like <see cref="ListItem"/> but forces a comma even for the first item, e.g.
+        /// grids that always read "label, dimensions".
+        /// </summary>
+        public MessageBuilder ListItemForcedComma(string fragment = null)
+        {
+            CheckNotBuilt();
+            ListItem();
+            _isFirstListItem = false;
+            if (!string.IsNullOrEmpty(fragment))
+                Fragment(fragment);
+            return this;
+        }
+
+        /// <summary>
+        /// Finalize and return the message, or null if nothing was appended. The builder
+        /// is single-use after this.
+        /// </summary>
+        public string Build()
+        {
+            CheckNotBuilt();
+            _state = State.Built;
+            return _sb.Length == 0 ? null : _sb.ToString();
+        }
+    }
+}
