@@ -119,6 +119,13 @@ namespace TangledeepAccess {
                 }
             }
 
+            // Ranged-targeting cursor (aiming a ranged weapon / point ability), captured from the
+            // targeting hook. Interrupts, since it tracks active cursor movement.
+            string aim = TargetingReader.Consume();
+            if (!string.IsNullOrEmpty(aim)) {
+                _speech?.Speak(aim);
+            }
+
             // Selection in a full-screen panel (inventory/equipment/skills/char sheet), captured
             // from the ImpactUI column hook. Menu navigation, so it interrupts for responsiveness.
             string panel = PanelReader.Consume();

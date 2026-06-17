@@ -28,6 +28,9 @@ line-of-sight scan. See **Features** and **Controls** below; architecture notes 
 - **Full-screen panels.** Inventory, equipment, skills, and the character sheet speak the
   selected item/ability — its name as you navigate, then its full tooltip (cost, cooldown,
   effects). Navigate with the game's own keys.
+- **Ranged targeting.** While aiming a ranged weapon or a point/area ability, the target tile
+  is read as the cursor moves — its contents, direction and distance from the hero, and
+  whether it is a valid target.
 - **Tile reading and a scanner.** On demand, read the hero's tile or sweep everything in
   line of sight by direction and distance (see Controls).
 
