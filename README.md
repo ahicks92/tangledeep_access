@@ -31,6 +31,8 @@ line-of-sight scan. See **Features** and **Controls** below; architecture notes 
 - **Ranged targeting.** While aiming a ranged weapon or a point/area ability, the target tile
   is read as the cursor moves — its contents, direction and distance from the hero, and
   whether it is a valid target.
+- **Shops & NPCs.** Talking to an NPC reads the dialogue and choices; in a shop, each item's
+  details and gold cost are read as you browse.
 - **Tile reading and a scanner.** On demand, read the hero's tile or sweep everything in
   line of sight by direction and distance (see Controls).
 
