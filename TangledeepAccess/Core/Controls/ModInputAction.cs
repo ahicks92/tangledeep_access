@@ -17,6 +17,11 @@ namespace TangledeepAccess.Controls {
         /// <summary>Confirm / activate the focused control (menus).</summary>
         Confirm,
 
+        /// <summary>The game's UI focus changed — a non-keyboard event source, not a key press. A
+        /// payload-free ping: the new focus lives in the focus watcher's published current value,
+        /// read by the realizer when this fires. Emitted once per focus edge, stale→none included.</summary>
+        FocusChanged,
+
         // Free-play spatial queries.
         ReadHere,
         Scan,

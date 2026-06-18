@@ -17,9 +17,11 @@ namespace TangledeepAccess.Controls {
     /// no re-deriving context. This is where speech and game calls happen; never in the hook.</item>
     /// </list>
     ///
-    /// <para>The base is BCL-only; concrete drainers touch the engine and live outside Core.</para>
+    /// <para>The base is BCL-only; concrete drainers touch the engine and live outside Core. A
+    /// drainer is an <see cref="IInputRealizer"/> (the realize seam) plus the claim/suppress half;
+    /// a non-keyboard event source implements only <see cref="IInputRealizer"/>.</para>
     /// </summary>
-    public abstract class InputDrainer {
+    public abstract class InputDrainer : IInputRealizer {
         /// <summary>
         /// Recognize this feature's keys for the current frame. Return true to claim the frame
         /// (the game's input is suppressed); false to let the chain fall through to the next

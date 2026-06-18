@@ -3,10 +3,11 @@ using System.Collections.Generic;
 
 namespace TangledeepAccess.Controls {
     /// <summary>
-    /// The buffer of recognized input events, handed from the input hook (which runs inside the
-    /// game's input pump and knows which <see cref="InputDrainer"/> claimed the frame) to the
-    /// per-frame pump (<c>Plugin.Update</c>) that drains and realizes them. Same enqueue-in-the-hook
-    /// / drain-in-the-pump discipline as <c>GameEventLog</c>: the hook only records, the pump acts.
+    /// The buffer of recognized input events, handed from their producers (a key drainer claiming
+    /// in the game's input hook, or a non-keyboard <see cref="IInputRealizer"/> source polling) to
+    /// the per-frame pump (<c>Plugin.Update</c>) that drains and realizes them. Same record-in-the-
+    /// producer / drain-in-the-pump discipline as <c>GameEventLog</c>: producers only record, the
+    /// pump acts.
     ///
     /// <para>A queue, not a single slot — events are appended and drained in order, nothing is
     /// silently overwritten. In practice a hook call claims at most one key, so usually one event
@@ -17,8 +18,8 @@ namespace TangledeepAccess.Controls {
     public static class InputQueue {
         private static readonly Queue<PendingInput> Pending = new Queue<PendingInput>();
 
-        /// <summary>Buffer one event, tagged with the drainer that claimed it.</summary>
-        public static void Enqueue(InputDrainer source, ModInputAction action) {
+        /// <summary>Buffer one event, tagged with the producer that will realize it.</summary>
+        public static void Enqueue(IInputRealizer source, ModInputAction action) {
             Pending.Enqueue(new PendingInput { Source = source, Action = action });
         }
 

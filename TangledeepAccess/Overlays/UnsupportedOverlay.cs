@@ -15,16 +15,16 @@ namespace TangledeepAccess.Overlays {
         public OverlayId Id => OverlayId.Unsupported;
 
         /// <summary>
-        /// Active whenever the game reports a focused UI element no overlay above claimed. The
-        /// focus must be <em>live</em>: the game does not null <c>uiObjectFocus</c> when a dialog
-        /// (or other transient UI) closes — it leaves the reference dangling on the now-deactivated
-        /// control — so a bare non-null check would latch this fallback on after every closed
-        /// dialog and capture input during open gameplay. A real focus has a GameObject that is
-        /// still active in the hierarchy; a stale one does not.
+        /// Active whenever there is a live focused UI element no overlay above claimed. Reads the
+        /// focus watcher's published <see cref="Controls.FocusWatcher.CurrentFocus"/> — the single,
+        /// edge-detected, validated focus — never the raw <c>uiObjectFocus</c>. The game does not
+        /// null <c>uiObjectFocus</c> when a dialog closes (it leaves the reference dangling on the
+        /// now-deactivated control), so reading it raw would latch this fallback on after every
+        /// closed dialog and capture input during open gameplay; the watcher collapses that stale
+        /// focus to null for us.
         /// </summary>
         public OverlayResult Handler() {
-            UIManagerScript.UIObject focus = UIManagerScript.uiObjectFocus;
-            return focus?.gameObj != null && focus.gameObj.activeInHierarchy
+            return Controls.FocusWatcher.CurrentFocus != null
                 ? OverlayResult.Active(this)
                 : OverlayResult.Inactive;
         }

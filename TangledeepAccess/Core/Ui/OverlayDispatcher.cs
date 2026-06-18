@@ -45,9 +45,10 @@ namespace TangledeepAccess.Ui {
         }
 
         /// <summary>
-        /// Record that the game moved focus to <paramref name="reference"/> (e.g. a
-        /// UIObject from the ChangeUIFocus hook). The next <see cref="Tick"/> with no nav
-        /// command syncs our cursor to the matching node. Recorded off the pump; applied on it.
+        /// Record that the game's focus moved to <paramref name="reference"/> (a UIObject, or null
+        /// when focus went away). Fed by the focus event source's realize — a validated, edge-
+        /// detected signal — not by polling the raw game field. The next <see cref="Tick"/> with no
+        /// nav command syncs our cursor to the matching node. Recorded off the pump; applied on it.
         /// </summary>
         public void RecordGameFocus(object reference) {
             _pendingGameFocus = reference;

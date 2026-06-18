@@ -102,11 +102,15 @@ namespace TangledeepAccess {
                     .Fragment("ready. Press slash for a list of commands."));
             }
 
-            // Single per-frame pump. The input hook claimed this frame's input (in the game's input
-            // pump) and enqueued each event tagged with the drainer that claimed it; we drain and
-            // hand each straight back to that drainer to realize. Speaking and game calls happen in
-            // the drainers (off the pump's thread is never an issue — this is the Unity thread),
-            // never in a Harmony hook.
+            // Poll the non-keyboard input sources before draining, so any event they emit this
+            // frame is realized below in the same pump. The focus watcher edge-detects the game's
+            // validated UI focus (stale focus included) and enqueues a FocusChanged event.
+            FocusWatcher.Poll();
+
+            // Single per-frame pump. Each producer enqueued this frame's events tagged with itself
+            // (a key drainer claiming in the game's input hook, or a source like the focus watcher
+            // polled just above); we drain and hand each straight back to its producer to realize.
+            // Speaking and game calls happen in the realizers (the Unity thread), never in a hook.
             IReadOnlyList<PendingInput> input = InputQueue.Drain();
             bool menuRealized = false;
             foreach (PendingInput ev in input) {
