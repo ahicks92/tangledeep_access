@@ -5,6 +5,8 @@ Speech is the primary interface; there is no visual fallback. If something fails
 silently, speaks stale data, or omits information, the player has no way to know.
 A logged failure is actionable; a silent one is invisible.
 
+This project is greenfield and new. That means that committing to `main` is acceptable.
+
 ## Game & environment (verified by decompile + binary inspection)
 
 - Engine: **Unity 2020.3.37f1, Mono, x64.** Full .NET 4.x BCL (mscorlib present,
