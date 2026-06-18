@@ -105,6 +105,13 @@
             <HintPath>$(Managed)\UnityEngine.InputLegacyModule.dll</HintPath>
             <Private>false</Private>
         </Reference>
+        <!-- AudioSource/AudioClip/AudioListener live here. Non-speech audio cues
+             synthesize a PCM buffer and play it through a mod-owned AudioSource (see
+             CLAUDE.md "Non-speech audio"). Private=false: the game ships this module. -->
+        <Reference Include="UnityEngine.AudioModule">
+            <HintPath>$(Managed)\UnityEngine.AudioModule.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
         <Reference Include="Assembly-CSharp">
             <HintPath>$(Managed)\Assembly-CSharp.dll</HintPath>
             <Private>false</Private>

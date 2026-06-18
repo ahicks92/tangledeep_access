@@ -50,6 +50,25 @@ This project is greenfield and new. That means that committing to `main` is acce
   path before any P/Invoke, so the by-name imports bind to the already-loaded module.
   `build.ps1` co-locates `prism.dll` with the plugin.
 
+## Non-speech audio (for now — 2026-06-17)
+
+Beyond speech, the mod plays its own audio cues (e.g. panned tones for spatial
+feedback). **The chosen approach: synthesize the PCM buffer ourselves and play it
+through a mod-owned Unity `AudioSource`.** Verified working: a 2D `AudioSource`
+(`spatialBlend = 0`) with `panStereo` set per cue produces audible, correctly
+hard-panned L/R output in this game. Put the buffer-generation math under `Core/`
+(BCL-only, unit-testable); the `AudioSource`/`AudioClip` glue touches Unity so it lives
+outside `Core/`.
+
+- The reference is `UnityEngine.AudioModule.dll` (`Private=false`; the game ships it).
+- The game itself uses **Unity's built-in audio** (no FMOD/Wwise). It bundles
+  **LeanTween**'s `LeanAudio` synth helper (in `Assembly-CSharp-firstpass`), but we
+  **deliberately don't use it** — we generate buffers directly.
+- **"For now" warning:** synthesizing everything ourselves is the current plan; expect
+  it to cover almost all cues. We may revisit (e.g. if we want true 3D positioning via
+  `spatialBlend`/world-positioned sources, or to reuse game SFX clips). Revisit this
+  note if the approach changes.
+
 ## Build, deploy, test
 
 - `setup-bepinex.ps1` — install vendored BepInEx into the game (once per install /
