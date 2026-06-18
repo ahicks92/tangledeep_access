@@ -16,7 +16,7 @@ namespace TangledeepAccess.Gameplay {
         public static readonly GameplayInputDrainer Instance = new GameplayInputDrainer();
 
         public override bool Claim(bool suppressWhileHeld) {
-            ModInputAction? action = InputKeys.Query();
+            ModInputAction? action = InputKeys.Query() ?? InputKeys.Volume();
             if (action.HasValue) {
                 InputQueue.Enqueue(this, action.Value);
                 return true;
@@ -28,6 +28,15 @@ namespace TangledeepAccess.Gameplay {
         public override void Realize(ModInputAction action, PrismSpeech speech) {
             if (action.Kind == ModInputKind.RepeatLast) {
                 speech.RepeatLast();
+                return;
+            }
+
+            // Volume nudges apply whenever the audio manager exists (even pre-run), so they bypass
+            // GameplayReader's in-play gate.
+            if (action.Kind == ModInputKind.VolumeMusic
+                || action.Kind == ModInputKind.VolumeSfx
+                || action.Kind == ModInputKind.VolumeFootsteps) {
+                speech.Speak(VolumeControl.Adjust(action));
                 return;
             }
 
@@ -60,7 +69,9 @@ namespace TangledeepAccess.Gameplay {
                     + "L, scan in view. Y, status. A, hotbar. Semicolon, look cursor; "
                     + "then arrows or numpad to move it, brackets to jump between things in view, "
                     + "Home to recenter. Page up and page down, step scanner entries; control plus "
-                    + "page up or down, step scanner categories. Apostrophe, repeat. Slash, this help.");
+                    + "page up or down, step scanner categories. "
+                    + "F8, F9, F10, lower music, sound, footsteps volume; hold shift to raise. "
+                    + "Apostrophe, repeat. Slash, this help.");
             }
 
             HeroPC hero = GameMasterScript.heroPCActor;

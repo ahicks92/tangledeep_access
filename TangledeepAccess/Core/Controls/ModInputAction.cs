@@ -25,6 +25,12 @@ namespace TangledeepAccess.Controls {
         Help,
         RepeatLast,
 
+        // Audio volume nudges (free play). Dx carries the direction: +1 louder, -1 quieter.
+        // A hacky one-time tuning aid — music drowns out speech/cues by default.
+        VolumeMusic,
+        VolumeSfx,
+        VolumeFootsteps,
+
         // Look-cursor control.
         LookToggle,
         LookRecenter,
