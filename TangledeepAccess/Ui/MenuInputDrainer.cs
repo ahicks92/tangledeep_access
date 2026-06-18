@@ -49,18 +49,21 @@ namespace TangledeepAccess.Ui {
         // The dispatcher is BCL-only and cannot touch the engine, so it returns a TickResult and we
         // apply the side effects here: follow the game's focus when we moved under our own nav (and
         // play its move sound, since the game didn't move it — we suppressed its input), confirm a
-        // game-backed control when activated, and speak.
+        // game-backed control when activated, and speak. Whenever we write the game's focus we tell
+        // the FocusWatcher, so it does not re-observe our own write as an external FocusChanged echo.
         private static void TickAndAct(ModInputAction? command, PrismSpeech speech) {
             TickResult result = UiRuntime.Dispatcher.Tick(command);
 
             if (result.Moved && result.FocusReference is UIManagerScript.UIObject moveTarget) {
                 UIManagerScript.ChangeUIFocusAndAlignCursor(moveTarget);
+                FocusWatcher.NoticeSelfWrite(moveTarget);
                 UIManagerScript.PlayCursorSound("Move");
             }
 
             if (result.Activated) {
                 if (result.FocusReference is UIManagerScript.UIObject confirmTarget) {
                     UIManagerScript.ChangeUIFocusAndAlignCursor(confirmTarget);
+                    FocusWatcher.NoticeSelfWrite(confirmTarget);
                 }
 
                 UIManagerScript.singletonUIMS?.CursorConfirm();

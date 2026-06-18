@@ -25,5 +25,13 @@ namespace TangledeepAccess.Controls {
             _last = current;
             return true;
         }
+
+        /// <summary>Adopt <paramref name="current"/> as the baseline without signaling an edge, so a
+        /// subsequent <see cref="Observe"/> of that same value reports no change. Used to cancel the
+        /// echo when the mod itself wrote the game's focus — that write is not external news, but a
+        /// later change the mod did NOT cause (e.g. focus going stale) still reads as an edge.</summary>
+        public void Accept(object current) {
+            _last = current;
+        }
     }
 }

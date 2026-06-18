@@ -27,13 +27,30 @@ namespace TangledeepAccess.Controls {
         /// emitted event is realized the same frame. Emits FocusChanged when the validated focus
         /// changes, including when it becomes stale (→ null).</summary>
         public static void Poll() {
-            UIManagerScript.UIObject raw = UIManagerScript.uiObjectFocus;
-            UIManagerScript.UIObject live =
-                raw != null && raw.gameObj != null && raw.gameObj.activeInHierarchy ? raw : null;
+            UIManagerScript.UIObject live = Live(UIManagerScript.uiObjectFocus);
             if (Tracker.Observe(live)) {
                 CurrentFocus = live;
                 InputQueue.Enqueue(FocusSource.Instance, ModInputAction.Of(ModInputKind.FocusChanged));
             }
+        }
+
+        /// <summary>
+        /// Tell the watcher the mod itself just wrote the game's focus to <paramref name="target"/>
+        /// (the menu drainer's nav/confirm push). Publishes it as the current focus and seeds the
+        /// tracker baseline so the next <see cref="Poll"/> does not re-observe our own write as an
+        /// external FocusChanged edge. A later change the mod did NOT cause still emits — e.g. the
+        /// focus going stale when a confirm closes the dialog, since that collapses to null.
+        /// </summary>
+        public static void NoticeSelfWrite(UIManagerScript.UIObject target) {
+            UIManagerScript.UIObject live = Live(target);
+            CurrentFocus = live;
+            Tracker.Accept(live);
+        }
+
+        // The validated focus: the live focused object, or null when there is none or it is no
+        // longer active in the hierarchy (a stale, torn-down control the game left dangling).
+        private static UIManagerScript.UIObject Live(UIManagerScript.UIObject raw) {
+            return raw != null && raw.gameObj != null && raw.gameObj.activeInHierarchy ? raw : null;
         }
     }
 }

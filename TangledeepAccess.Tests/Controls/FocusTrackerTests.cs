@@ -48,5 +48,19 @@ namespace TangledeepAccess.Tests.Controls {
             t.Observe(null);
             Assert.True(t.Observe(A)); // same object refocused after going away is still a fresh edge
         }
+
+        [Fact]
+        public void AcceptSuppressesTheEchoOfASelfWrite() {
+            var t = new FocusTracker();
+            t.Accept(A); // the mod wrote focus to A; adopt it as baseline without an edge
+            Assert.False(t.Observe(A)); // next poll sees A — our own write, not external news
+        }
+
+        [Fact]
+        public void AcceptStillLetsALaterRealChangeEmit() {
+            var t = new FocusTracker();
+            t.Accept(A); // mod focused A
+            Assert.True(t.Observe(null)); // A then went stale (confirm closed the dialog) => still an edge
+        }
     }
 }
