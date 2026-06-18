@@ -20,7 +20,7 @@ namespace TangledeepAccess.Gameplay {
         private static int _y;
 
         /// <summary>The announcement for a just-entered notable tile, or null. Call every frame.</summary>
-        public static string PollOnMove() {
+        public static MessageBuilder PollOnMove() {
             HeroPC hero = GameMasterScript.heroPCActor;
             if (hero == null || !GameMasterScript.actualGameStarted || MapMasterScript.activeMap == null) {
                 _have = false; // dropped out of play; re-arm so re-entry doesn't fire on spawn
@@ -68,7 +68,7 @@ namespace TangledeepAccess.Gameplay {
                 }
             }
 
-            return notable ? message.Build() : null;
+            return notable ? message : null;
         }
     }
 }

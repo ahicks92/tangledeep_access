@@ -27,14 +27,11 @@ namespace TangledeepAccess.Gameplay {
 
         public override void Realize(ModInputAction action, PrismSpeech speech) {
             if (action.Kind == ModInputKind.RepeatLast) {
-                speech.Speak(speech.LastSpoken);
+                speech.RepeatLast();
                 return;
             }
 
-            string spoken = GameplayReader.Execute(action);
-            if (!string.IsNullOrEmpty(spoken)) {
-                speech.Speak(spoken);
-            }
+            speech.Speak(GameplayReader.Execute(action));
         }
     }
 
@@ -52,15 +49,18 @@ namespace TangledeepAccess.Gameplay {
         /// realizes those. This handles only the query hotkeys. Repeat-last is realized in
         /// <see cref="GameplayInputDrainer"/>.
         /// </summary>
-        public static string Execute(ModInputAction action) {
+        public static MessageBuilder Execute(ModInputAction action) {
+            var message = new MessageBuilder();
+
             // Help is static text and useful even mid-transition, so answer it before the
-            // in-play gate.
+            // in-play gate. It is one authored paragraph, so it is a single fragment.
             if (action.Kind == ModInputKind.Help) {
-                return "Tangledeep Access commands. K, read here and surroundings. "
+                return message.Fragment(
+                    "Tangledeep Access commands. K, read here and surroundings. "
                     + "L, scan in view. Y, status. A, hotbar. Semicolon, look cursor; "
                     + "then arrows or numpad to move it, brackets to jump between things in view, "
                     + "Home to recenter. Page up and page down, step scanner entries; control plus "
-                    + "page up or down, step scanner categories. Apostrophe, repeat. Slash, this help.";
+                    + "page up or down, step scanner categories. Apostrophe, repeat. Slash, this help.");
             }
 
             HeroPC hero = GameMasterScript.heroPCActor;
@@ -68,7 +68,6 @@ namespace TangledeepAccess.Gameplay {
                 return null;
             }
 
-            var message = new MessageBuilder();
             switch (action.Kind) {
                 case ModInputKind.ReadHere:
                     ReadHere(message, hero);
@@ -84,7 +83,7 @@ namespace TangledeepAccess.Gameplay {
                     break;
             }
 
-            return message.Build();
+            return message;
         }
 
         // --- Hotbar ---
@@ -142,9 +141,9 @@ namespace TangledeepAccess.Gameplay {
 
         private static void ReadStatus(MessageBuilder message, HeroPC hero) {
             StatBlock stats = hero.myStats;
-            message.Fragment("Health " + Bar(stats, StatTypes.HEALTH));
-            message.ListItem("Stamina " + Bar(stats, StatTypes.STAMINA));
-            message.ListItem("Energy " + Bar(stats, StatTypes.ENERGY));
+            Bar(message.ListItem(), stats, StatTypes.HEALTH, "health");
+            Bar(message.ListItem(), stats, StatTypes.STAMINA, "stamina");
+            Bar(message.ListItem(), stats, StatTypes.ENERGY, "energy");
             message.ListItem("Level " + stats.GetLevel());
 
             foreach (StatusEffect status in stats.GetAllStatuses()) {
@@ -167,10 +166,12 @@ namespace TangledeepAccess.Gameplay {
             }
         }
 
-        private static string Bar(StatBlock stats, StatTypes stat) {
+        // Append a stat's current/max as a fraction with the stat name as its unit, onto the
+        // list item the caller opened, e.g. "5 of 20 health".
+        private static void Bar(MessageBuilder message, StatBlock stats, StatTypes stat, string unit) {
             int cur = (int)stats.GetStat(stat, StatDataTypes.CUR);
             int max = (int)stats.GetStat(stat, StatDataTypes.MAX);
-            return cur + " of " + max;
+            message.PushFraction(cur, max, unit);
         }
 
         // --- Read here ---
@@ -180,11 +181,9 @@ namespace TangledeepAccess.Gameplay {
             // player has parked the cursor; otherwise it reads the hero's own tile.
             bool atCursor = LookCursor.Active;
             Vector2 pos = atCursor ? LookCursor.Position : hero.GetPos();
-            int x = (int)pos.x;
-            int y = (int)pos.y;
 
             message.Fragment(MapMasterScript.activeMap.GetName());
-            message.ListItem(x + ", " + y);
+            message.ListItem().PushAbsoluteCoordinates(pos);
             message.ListItem();
             if (atCursor) {
                 // Remote tile: defer to the cursor's own LOS-gated read (contents + offset).
@@ -256,7 +255,7 @@ namespace TangledeepAccess.Gameplay {
             foreach (Poi p in found) {
                 message.ListItem(p.Name);
                 message.Fragment(p.Hostile ? "(hostile)" : null);
-                message.Fragment(GridDirection.Offset((int)p.Pos.x - (int)hp.x, (int)p.Pos.y - (int)hp.y));
+                message.PushRelativeCoordinates(p.Pos - hp);
             }
         }
     }

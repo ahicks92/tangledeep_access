@@ -14,7 +14,7 @@ namespace TangledeepAccess.Gameplay {
     /// tile so a repeated update for the same location does not repeat.</para>
     /// </summary>
     internal static class TargetingReader {
-        private static string _pending;
+        private static MessageBuilder _pending;
         private static int _lastX = int.MinValue;
         private static int _lastY = int.MinValue;
 
@@ -39,14 +39,14 @@ namespace TangledeepAccess.Gameplay {
             TileDescriber.Contents(message, tile, includeActor: true);
 
             Vector2 hp = hero.GetPos();
-            message.ListItem(GridDirection.Offset(x - (int)hp.x, y - (int)hp.y));
+            message.ListItem().PushRelativeCoordinates(location - hp);
             message.ListItem(isGoodTile ? "valid target" : "invalid target");
-            _pending = message.Build();
+            _pending = message;
         }
 
         /// <summary>Take the pending targeting description (or null), clearing it.</summary>
-        public static string Consume() {
-            string p = _pending;
+        public static MessageBuilder Consume() {
+            MessageBuilder p = _pending;
             _pending = null;
             return p;
         }

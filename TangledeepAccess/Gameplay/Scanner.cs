@@ -76,10 +76,7 @@ namespace TangledeepAccess.Gameplay {
                     break;
             }
 
-            string spoken = message.Build();
-            if (!string.IsNullOrEmpty(spoken)) {
-                speech.Speak(spoken);
-            }
+            speech.Speak(message);
         }
     }
 
@@ -281,8 +278,8 @@ namespace TangledeepAccess.Gameplay {
 
         private static void SpeakEntry(MessageBuilder message, ScanEntry entry, int index, int count) {
             message.Fragment(entry.Name);
-            message.Fragment(GridDirection.Offset(entry.Dx, entry.Dy));
-            message.ListItem((index + 1) + " of " + count);
+            message.PushRelativeCoordinates(new Vector2(entry.Dx, entry.Dy));
+            message.ListItem().PushFraction(index + 1, count);
         }
 
         private static string Label(ScanCategory cat) {

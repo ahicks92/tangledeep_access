@@ -1,3 +1,5 @@
+using TangledeepAccess.Speech;
+
 namespace TangledeepAccess.Ui {
     /// <summary>
     /// What one <see cref="OverlayDispatcher.Tick"/> produced for the glue to act on. The
@@ -5,8 +7,10 @@ namespace TangledeepAccess.Ui {
     /// itself; it returns this and the (Unity-aware) caller does so on the main thread.
     /// </summary>
     public sealed class TickResult {
-        /// <summary>Text to speak this tick, or null/empty.</summary>
-        public string Speak;
+        /// <summary>The message to speak this tick, or null when there is nothing to say. Carried
+        /// as the builder, not a built string, so it reaches <see cref="PrismSpeech.Speak"/>
+        /// unflattened — the dispatcher never calls <c>.Build()</c> itself.</summary>
+        public MessageBuilder Message;
 
         /// <summary>True if our cursor moved under our own navigation — the caller plays the
         /// game's move sound and syncs the game focus to <see cref="FocusReference"/>.</summary>

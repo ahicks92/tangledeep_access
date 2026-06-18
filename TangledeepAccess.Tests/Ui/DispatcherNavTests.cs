@@ -51,7 +51,7 @@ namespace TangledeepAccess.Tests.Ui {
             d.Tick(); // settle at start "alpha"
             TickResult r = d.Tick(ModInputAction.Move(0, -1)); // down
 
-            Assert.Equal("beta", r.Speak);
+            Assert.Equal("beta", r.Message?.Build());
             Assert.True(r.Moved);
             Assert.Same(b, r.FocusReference);
         }
@@ -68,7 +68,7 @@ namespace TangledeepAccess.Tests.Ui {
             TickResult r = d.Tick(ModInputAction.Move(0, 1)); // up
 
             Assert.False(r.Moved); // nothing above
-            Assert.Equal("alpha", r.Speak); // re-read current
+            Assert.Equal("alpha", r.Message?.Build()); // re-read current
         }
 
         [Fact]

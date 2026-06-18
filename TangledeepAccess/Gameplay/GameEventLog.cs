@@ -28,7 +28,7 @@ namespace TangledeepAccess.Gameplay {
         /// Drain all buffered lines into one spoken message (space-joined sentences), or null if
         /// nothing is pending.
         /// </summary>
-        public static string DrainToMessage() {
+        public static MessageBuilder DrainToMessage() {
             if (Pending.Count == 0) {
                 return null;
             }
@@ -38,7 +38,7 @@ namespace TangledeepAccess.Gameplay {
                 message.Fragment(Pending.Dequeue());
             }
 
-            return message.Build();
+            return message;
         }
     }
 }

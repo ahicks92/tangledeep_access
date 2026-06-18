@@ -243,15 +243,23 @@ per frame from the pump.
   (`BuildHoverTextFromMonster`, `GetInformationForTooltip`, ...). Speak those; don't
   hardcode. Mod-authored strings go in one central place (for future translation), not
   inline literals.
+- **Speech only accepts a MessageBuilder.** `PrismSpeech.Speak(MessageBuilder)` is the
+  one speech entry point — there is no string overload — so every spoken message is
+  composed through the builder's separation discipline and the single chokepoint can
+  uniformly post-process all speech (e.g. inject spatial/vector announcements). A producer
+  builds a `MessageBuilder` and hands it to `Speak`; it does NOT `.Build()` a string and
+  pass that. `Speak` is the sole owner of `.Build()` on the speech path: it builds once and
+  no-ops on a null/empty builder, so producers return `null`/empty freely and callers need
+  no guards. The one path that speaks without a builder is `PrismSpeech.RepeatLast()` (the
+  repeat hotkey re-emits the already-built `LastSpoken`). The only other `.Build()` calls
+  are the dev-only `OverlayDispatcher.Describe`/label dump and tests.
 - **One MessageBuilder per spoken message — never nest.** Overlay control callbacks
   receive the framework's builder as `ctx.Message`; append directly to it
   (`ctx.Message.Fragment(...)`, `.ListItem(...)`). A helper that assembles several pieces
   takes that same `MessageBuilder` as a parameter and appends to it. Do NOT `new
   MessageBuilder()` inside a callback, `.Build()` it, and re-inject the string as a single
   `Fragment` — that flattens the fragment/list-item separation discipline into one opaque
-  fragment and duplicates the builder lifecycle. The only code that constructs a builder
-  and calls `.Build()` is the dispatcher that owns the message (`OverlayDispatcher`); the
-  only other `new MessageBuilder()` is in tests.
+  fragment and duplicates the builder lifecycle.
 - **High-value hook target:** `GameLogScript` (`EnqueueEndOfTurnLogMessage`) is the
   centralized turn-by-turn event log — nearly every gameplay event flows through it as
   text. Piping it to speech is the biggest early win.

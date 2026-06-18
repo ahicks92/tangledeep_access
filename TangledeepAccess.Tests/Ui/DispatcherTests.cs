@@ -31,7 +31,7 @@ namespace TangledeepAccess.Tests.Ui {
             d.Register(() => OverlayResult.Active(bottom)); // registered first => lowest
             d.Register(() => OverlayResult.Active(top)); // last => top of stack
 
-            Assert.Equal("top", d.Tick().Speak);
+            Assert.Equal("top", d.Tick().Message?.Build());
         }
 
         [Fact]
@@ -44,7 +44,7 @@ namespace TangledeepAccess.Tests.Ui {
             d.Register(() => OverlayResult.Inactive);
             d.Register(() => null); // null also means inactive
 
-            Assert.Equal("generic", d.Tick().Speak);
+            Assert.Equal("generic", d.Tick().Message?.Build());
         }
 
         [Fact]
@@ -58,10 +58,10 @@ namespace TangledeepAccess.Tests.Ui {
             var d = new OverlayDispatcher();
             d.Register(() => OverlayResult.Active(overlay));
 
-            Assert.Equal("alpha", d.Tick().Speak); // starts at first item
+            Assert.Equal("alpha", d.Tick().Message?.Build()); // starts at first item
             d.RecordGameFocus(b);
-            Assert.Equal("beta", d.Tick().Speak); // synced to focused object
-            Assert.Null(d.Tick().Speak); // unchanged focus => no repeat (dedupe + cache persisted)
+            Assert.Equal("beta", d.Tick().Message?.Build()); // synced to focused object
+            Assert.Null(d.Tick().Message?.Build()); // unchanged focus => no repeat (dedupe + cache persisted)
         }
 
         [Fact]
@@ -76,15 +76,15 @@ namespace TangledeepAccess.Tests.Ui {
             var d = new OverlayDispatcher();
             d.Register(() => active ? OverlayResult.Active(overlay) : OverlayResult.Inactive);
 
-            Assert.Equal("alpha", d.Tick().Speak);
+            Assert.Equal("alpha", d.Tick().Message?.Build());
             d.RecordGameFocus(b);
-            Assert.Equal("beta", d.Tick().Speak);
+            Assert.Equal("beta", d.Tick().Message?.Build());
 
             active = false;
-            Assert.Null(d.Tick().Speak); // deactivated => cache cleared
+            Assert.Null(d.Tick().Message?.Build()); // deactivated => cache cleared
 
             active = true;
-            Assert.Equal("alpha", d.Tick().Speak); // focus reset to start, re-spoken
+            Assert.Equal("alpha", d.Tick().Message?.Build()); // focus reset to start, re-spoken
         }
 
         [Fact]
@@ -103,15 +103,15 @@ namespace TangledeepAccess.Tests.Ui {
                     : OverlayResult.Sleeping(OverlayId.Inventory)
             );
 
-            Assert.Equal("alpha", d.Tick().Speak);
+            Assert.Equal("alpha", d.Tick().Message?.Build());
             d.RecordGameFocus(b);
-            Assert.Equal("beta", d.Tick().Speak);
+            Assert.Equal("beta", d.Tick().Message?.Build());
 
             mode = OverlayResultKind.Sleeping;
-            Assert.Null(d.Tick().Speak); // sleeping: nothing built/spoken, cache kept
+            Assert.Null(d.Tick().Message?.Build()); // sleeping: nothing built/spoken, cache kept
 
             mode = OverlayResultKind.Active;
-            Assert.Null(d.Tick().Speak); // focus still on beta => no repeat (cache survived)
+            Assert.Null(d.Tick().Message?.Build()); // focus still on beta => no repeat (cache survived)
         }
 
         [Fact]
@@ -129,16 +129,16 @@ namespace TangledeepAccess.Tests.Ui {
             d.Register(() => OverlayResult.Active(inv));
             d.Register(() => showEquip ? OverlayResult.Active(equip) : OverlayResult.Inactive);
 
-            Assert.Equal("inv-a", d.Tick().Speak);
+            Assert.Equal("inv-a", d.Tick().Message?.Build());
             d.RecordGameFocus(b);
-            Assert.Equal("inv-b", d.Tick().Speak); // inventory focus on b
+            Assert.Equal("inv-b", d.Tick().Message?.Build()); // inventory focus on b
 
             showEquip = true;
-            Assert.Equal("equip", d.Tick().Speak); // equipment takes over
+            Assert.Equal("equip", d.Tick().Message?.Build()); // equipment takes over
 
             showEquip = false;
             // Inventory cache was cleared when equipment took over, so focus resets to start.
-            Assert.Equal("inv-a", d.Tick().Speak);
+            Assert.Equal("inv-a", d.Tick().Message?.Build());
         }
     }
 }

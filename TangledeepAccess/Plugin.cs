@@ -96,8 +96,10 @@ namespace TangledeepAccess {
             // Speak a one-time "ready" line once the backend has had a few frames to come up,
             // so the player knows the mod is active and how to discover its commands.
             if (_startupFrames >= 0 && --_startupFrames < 0) {
-                _speech?.Speak(PluginName + " " + PluginVersion
-                    + " ready. Press slash for a list of commands.");
+                _speech?.Speak(new MessageBuilder()
+                    .Fragment(PluginName)
+                    .Fragment(PluginVersion)
+                    .Fragment("ready. Press slash for a list of commands."));
             }
 
             // Single per-frame pump. The input hook claimed this frame's input (in the game's input
@@ -122,33 +124,22 @@ namespace TangledeepAccess {
             }
 
             // Ranged-targeting cursor (aiming a ranged weapon / point ability), captured from the
-            // targeting hook. Interrupts, since it tracks active cursor movement.
-            string aim = TargetingReader.Consume();
-            if (!string.IsNullOrEmpty(aim)) {
-                _speech?.Speak(aim);
-            }
+            // targeting hook. Interrupts, since it tracks active cursor movement. Speak no-ops on a
+            // null/empty builder, so these pump producers need no guards.
+            _speech?.Speak(TargetingReader.Consume());
 
             // Spontaneous game-log events (combat, status, NPC barks) the Harmony hook buffered
             // this frame. Spoken without interrupting so a multi-event turn is not chopped, and
             // after any overlay speech above so menu navigation stays responsive.
-            string log = GameEventLog.DrainToMessage();
-            if (!string.IsNullOrEmpty(log)) {
-                _speech?.Speak(log, interrupt: false);
-            }
+            _speech?.Speak(GameEventLog.DrainToMessage(), interrupt: false);
 
             // Notable contents of a tile the hero just stepped onto (items, hazardous terrain).
             // Queued, not interrupting, so it follows the turn's log lines.
-            string stepped = MovementWatcher.PollOnMove();
-            if (!string.IsNullOrEmpty(stepped)) {
-                _speech?.Speak(stepped, interrupt: false);
-            }
+            _speech?.Speak(MovementWatcher.PollOnMove(), interrupt: false);
 
             // Low/critical health warning. Interrupts — survival in a permadeath game trumps
             // whatever else is queued.
-            string health = HealthWatcher.Poll();
-            if (!string.IsNullOrEmpty(health)) {
-                _speech?.Speak(health);
-            }
+            _speech?.Speak(HealthWatcher.Poll());
         }
     }
 }

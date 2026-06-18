@@ -43,7 +43,7 @@ namespace TangledeepAccess.Gameplay {
         }
 
         public override void Realize(ModInputAction action, PrismSpeech speech) {
-            string spoken;
+            MessageBuilder spoken;
             switch (action.Kind) {
                 case ModInputKind.LookToggle:
                     spoken = LookCursor.Toggle();
@@ -65,9 +65,7 @@ namespace TangledeepAccess.Gameplay {
                     break;
             }
 
-            if (!string.IsNullOrEmpty(spoken)) {
-                speech.Speak(spoken);
-            }
+            speech.Speak(spoken);
         }
     }
 
@@ -101,11 +99,11 @@ namespace TangledeepAccess.Gameplay {
         }
 
         /// <summary>Toggle the cursor on (centered on the hero) or off. Returns what to speak.</summary>
-        public static string Toggle() {
+        public static MessageBuilder Toggle() {
             HeroPC hero = GameMasterScript.heroPCActor;
             if (Active || hero == null) {
                 Active = false;
-                return "Look cursor off";
+                return new MessageBuilder().Fragment("Look cursor off");
             }
 
             Active = true;
@@ -113,11 +111,11 @@ namespace TangledeepAccess.Gameplay {
             var message = new MessageBuilder();
             message.Fragment("Look cursor");
             Describe(message, hero);
-            return message.Build();
+            return message;
         }
 
         /// <summary>Re-center the cursor on the hero and describe that tile.</summary>
-        public static string Recenter() {
+        public static MessageBuilder Recenter() {
             HeroPC hero = GameMasterScript.heroPCActor;
             if (!Active || hero == null) {
                 return null;
@@ -127,11 +125,11 @@ namespace TangledeepAccess.Gameplay {
             var message = new MessageBuilder();
             message.Fragment("Centered");
             Describe(message, hero);
-            return message.Build();
+            return message;
         }
 
         /// <summary>Step the cursor by (dx, dy) in tile space (+x east, +y north), then describe it.</summary>
-        public static string Move(int dx, int dy) {
+        public static MessageBuilder Move(int dx, int dy) {
             HeroPC hero = GameMasterScript.heroPCActor;
             Map map = MapMasterScript.activeMap;
             if (!Active || hero == null || map == null) {
@@ -148,7 +146,7 @@ namespace TangledeepAccess.Gameplay {
             _x = nx;
             _y = ny;
             Describe(message, hero);
-            return message.Build();
+            return message;
         }
 
         /// <summary>
@@ -156,7 +154,7 @@ namespace TangledeepAccess.Gameplay {
         /// interest in line of sight, nearest-first, wrapping. Lets the player tour visible
         /// actors and items without stepping tile by tile (the Factorio-Access cursor model).
         /// </summary>
-        public static string JumpToPoi(int dir) {
+        public static MessageBuilder JumpToPoi(int dir) {
             HeroPC hero = GameMasterScript.heroPCActor;
             if (!Active || hero == null || MapMasterScript.activeMap == null) {
                 return null;
@@ -164,7 +162,7 @@ namespace TangledeepAccess.Gameplay {
 
             List<Poi> pois = Surroundings.CollectVisible(hero);
             if (pois.Count == 0) {
-                return "nothing in view";
+                return new MessageBuilder().Fragment("nothing in view");
             }
 
             pois.Sort((a, b) => a.Steps - b.Steps);
@@ -185,7 +183,7 @@ namespace TangledeepAccess.Gameplay {
 
             var message = new MessageBuilder();
             Describe(message, hero);
-            return message.Build();
+            return message;
         }
 
         /// <summary>Drop the cursor if the hero/level went away (e.g. on level change).</summary>
@@ -202,9 +200,6 @@ namespace TangledeepAccess.Gameplay {
         private static void Describe(MessageBuilder message, HeroPC hero) {
             var pos = new Vector2(_x, _y);
             Vector2 hp = hero.GetPos();
-            int dx = _x - (int)hp.x;
-            int dy = _y - (int)hp.y;
-            string offset = GridDirection.Offset(dx, dy);
 
             bool[,] visible = hero.visibleTilesArray;
             bool inSight = visible != null && visible[_x, _y];
@@ -214,7 +209,7 @@ namespace TangledeepAccess.Gameplay {
                 message.Fragment("not visible");
             }
 
-            message.ListItem(offset);
+            message.ListItem().PushRelativeCoordinates(pos - hp);
         }
     }
 }

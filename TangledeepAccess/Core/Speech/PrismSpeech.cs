@@ -85,11 +85,29 @@ namespace TangledeepAccess.Speech {
         }
 
         /// <summary>
-        /// Speak <paramref name="text"/> through the screen-reader output path
-        /// (speech plus braille where the backend supports it). No-op when
-        /// unavailable. <paramref name="interrupt"/> cuts off current speech.
+        /// Speak <paramref name="message"/> through the screen-reader output path
+        /// (speech plus braille where the backend supports it). This is the mod's single
+        /// speech entry point, and it deliberately takes a <see cref="MessageBuilder"/>, not
+        /// a raw string: every spoken message is composed through the builder's separation
+        /// discipline, so this one chokepoint can uniformly post-process all speech (e.g.
+        /// inject spatial/vector announcements) without each call site building its own string.
+        /// A null or empty builder is a no-op. <paramref name="interrupt"/> cuts off current
+        /// speech.
         /// </summary>
-        public void Speak(string text, bool interrupt = true) {
+        public void Speak(MessageBuilder message, bool interrupt = true) {
+            SpeakText(message?.Build(), interrupt);
+        }
+
+        /// <summary>
+        /// Re-speak the most recent non-empty line (the repeat-last hotkey). No-op until
+        /// something has been spoken. Re-emits the already-built text rather than rebuilding,
+        /// so it is the one path that legitimately speaks without a fresh builder.
+        /// </summary>
+        public void RepeatLast(bool interrupt = true) {
+            SpeakText(LastSpoken, interrupt);
+        }
+
+        private void SpeakText(string text, bool interrupt) {
             if (string.IsNullOrEmpty(text)) {
                 return;
             }

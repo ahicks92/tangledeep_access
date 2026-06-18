@@ -66,9 +66,8 @@ namespace TangledeepAccess.Ui {
                 UIManagerScript.singletonUIMS?.CursorConfirm();
             }
 
-            if (!string.IsNullOrEmpty(result.Speak)) {
-                speech.Speak(result.Speak);
-            }
+            // Speak no-ops on a null/empty builder, so no guard is needed.
+            speech.Speak(result.Message);
         }
     }
 }

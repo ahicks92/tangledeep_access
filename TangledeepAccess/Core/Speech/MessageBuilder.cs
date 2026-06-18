@@ -116,6 +116,24 @@ namespace TangledeepAccess.Speech {
         }
 
         /// <summary>
+        /// Append a fraction as "<paramref name="numerator"/> of <paramref name="denominator"/>"
+        /// (e.g. "5 of 20"), with an optional trailing <paramref name="unit"/> ("5 of 20 charges").
+        /// The single home for the spoken "N of M" idiom — health/stamina bars, "item 1 of 4",
+        /// etc. — so the connective ("of") lives in one place for future translation and every
+        /// fraction reads identically. Behaves like <see cref="Fragment"/> for spacing (the caller
+        /// sets list boundaries with <see cref="ListItem"/>).
+        /// </summary>
+        public MessageBuilder PushFraction(int numerator, int denominator, string unit = null) {
+            CheckNotBuilt();
+            string text = numerator + " of " + denominator;
+            if (!string.IsNullOrEmpty(unit)) {
+                text += " " + unit;
+            }
+
+            return Fragment(text);
+        }
+
+        /// <summary>
         /// Finalize and return the message, or null if nothing was appended. The builder
         /// is single-use after this.
         /// </summary>

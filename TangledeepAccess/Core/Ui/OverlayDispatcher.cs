@@ -209,7 +209,7 @@ namespace TangledeepAccess.Ui {
                 if (hasModHandler) {
                     // Mod-side control: run its handler; the game is not involved.
                     graph.Click(ctx, Modifiers.None);
-                    result.Speak = message.Build();
+                    result.Message = message;
                 } else {
                     // Game-backed pass-through: let the caller confirm it through the game.
                     result.Activated = true;
@@ -225,7 +225,7 @@ namespace TangledeepAccess.Ui {
 
             result.Moved = prev == null || !prev.Equals(now);
             result.FocusReference = now?.Reference;
-            result.Speak = message.Build();
+            result.Message = message;
             _lastSpoken = now;
             return result;
         }
@@ -254,7 +254,7 @@ namespace TangledeepAccess.Ui {
                 node.Vtable.Label(ctx);
             }
 
-            return new TickResult { Speak = message.Build() };
+            return new TickResult { Message = message };
         }
 
         // A Move's (dx, dy) — +x east, +y north — to a menu graph direction. Menu nav only ever

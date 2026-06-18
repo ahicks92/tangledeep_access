@@ -9,8 +9,9 @@ namespace TangledeepAccess.Gameplay {
     /// </summary>
     public static class GridDirection {
         /// <summary>
-        /// Component description of an offset, e.g. "2 north, 3 east", "4 west", or "here" when
-        /// both components are zero. North/south is spoken before east/west.
+        /// Component description of an offset in screen-relative terms, e.g. "3 right, 2 up",
+        /// "4 left", or "here" when both components are zero. The grid's +x is east (spoken
+        /// "right") and +y is north (spoken "up"); the x component is spoken before the y.
         /// </summary>
         public static string Offset(int dx, int dy) {
             if (dx == 0 && dy == 0) {
@@ -18,18 +19,18 @@ namespace TangledeepAccess.Gameplay {
             }
 
             var sb = new StringBuilder();
-            if (dy > 0) {
-                sb.Append(dy).Append(" north");
-            } else if (dy < 0) {
-                sb.Append(-dy).Append(" south");
+            if (dx > 0) {
+                sb.Append(dx).Append(" right");
+            } else if (dx < 0) {
+                sb.Append(-dx).Append(" left");
             }
 
-            if (dx != 0) {
+            if (dy != 0) {
                 if (sb.Length > 0) {
                     sb.Append(", ");
                 }
 
-                sb.Append(dx > 0 ? dx + " east" : -dx + " west");
+                sb.Append(dy > 0 ? dy + " up" : -dy + " down");
             }
 
             return sb.ToString();

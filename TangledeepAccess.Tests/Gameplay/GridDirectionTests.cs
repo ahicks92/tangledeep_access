@@ -9,18 +9,18 @@ namespace TangledeepAccess.Tests.Gameplay {
         }
 
         [Fact]
-        public void OffsetCardinalsUseGameConvention() {
-            // +y north, +x east.
-            Assert.Equal("3 north", GridDirection.Offset(0, 3));
-            Assert.Equal("2 south", GridDirection.Offset(0, -2));
-            Assert.Equal("5 east", GridDirection.Offset(5, 0));
-            Assert.Equal("4 west", GridDirection.Offset(-4, 0));
+        public void OffsetAxesAreScreenRelative() {
+            // +x east => "right", +y north => "up".
+            Assert.Equal("3 up", GridDirection.Offset(0, 3));
+            Assert.Equal("2 down", GridDirection.Offset(0, -2));
+            Assert.Equal("5 right", GridDirection.Offset(5, 0));
+            Assert.Equal("4 left", GridDirection.Offset(-4, 0));
         }
 
         [Fact]
-        public void OffsetCombinesNorthSouthBeforeEastWest() {
-            Assert.Equal("2 north, 3 east", GridDirection.Offset(3, 2));
-            Assert.Equal("1 south, 4 west", GridDirection.Offset(-4, -1));
+        public void OffsetSpeaksXBeforeY() {
+            Assert.Equal("3 right, 2 up", GridDirection.Offset(3, 2));
+            Assert.Equal("4 left, 1 down", GridDirection.Offset(-4, -1));
         }
 
         [Fact]

@@ -18,7 +18,7 @@ namespace TangledeepAccess.Gameplay {
         private static bool _belowCritical;
 
         /// <summary>A health warning to speak this frame, or null. Call every frame in play.</summary>
-        public static string Poll() {
+        public static MessageBuilder Poll() {
             HeroPC hero = GameMasterScript.heroPCActor;
             if (hero == null || !GameMasterScript.actualGameStarted) {
                 _belowLow = false;
@@ -33,18 +33,24 @@ namespace TangledeepAccess.Gameplay {
             }
 
             float frac = (float)cur / max;
-            string warning = null;
+            MessageBuilder warning = null;
 
             // Critical takes priority over low when both newly cross.
             if (frac <= CriticalFraction) {
                 if (!_belowCritical) {
-                    warning = "Warning, health critical, " + cur + " of " + max;
+                    warning = new MessageBuilder()
+                        .Fragment("Warning, health critical")
+                        .ListItemForcedComma()
+                        .PushFraction(cur, max);
                 }
                 _belowCritical = true;
                 _belowLow = true;
             } else if (frac <= LowFraction) {
                 if (!_belowLow) {
-                    warning = "Health low, " + cur + " of " + max;
+                    warning = new MessageBuilder()
+                        .Fragment("Health low")
+                        .ListItemForcedComma()
+                        .PushFraction(cur, max);
                 }
                 _belowLow = true;
                 _belowCritical = false;
