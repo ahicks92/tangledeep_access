@@ -40,9 +40,16 @@ through descending into the dungeon and fighting a monster. See **Features** and
 
 ## Controls
 
-Mod controls are chosen from keys the game's Default layout leaves unbound, so they do
-not shadow any game action. Menus are navigated with the game's own keys; the mod just
-speaks them.
+The full, authoritative listing of **both** game and mod controls — both keyboard layouts
+on one line each, plus how non-numpad keyboards do diagonals — is in
+[`docs/controls.md`](docs/controls.md). The mod hotkeys are summarized below.
+
+Mod controls are chosen from keys the game's **Default** layout leaves unbound, so they do
+not shadow any game action. They are read as raw key codes (not through the game's Rewired
+bindings), so they are the same whichever game layout you pick — but that also means under
+the **WASD** layout the mod's `A` (hotbar) collides with `A` = move West. The mod hotkeys
+assume the Default layout; see `docs/controls.md` for the caveat. Menus are navigated with
+the game's own keys; the mod just speaks them.
 
 - `K` — **Read here**: the hero's tile — map, coordinates, terrain, any items on it, and the
   open directions you can walk (its "exits").
