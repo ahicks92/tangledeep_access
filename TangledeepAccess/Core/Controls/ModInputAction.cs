@@ -1,0 +1,54 @@
+namespace TangledeepAccess.Controls {
+    /// <summary>
+    /// The metaphorical intent a key press expresses — independent of the physical key that
+    /// produced it and of how the active context will carry it out. The engine-side keymap
+    /// (<c>InputKeys</c>) turns keys into these, one shared vocabulary across menus, the look
+    /// cursor, and free play; the per-context realizer (the <see cref="Ui.OverlayDispatcher"/> for
+    /// menus, <c>GameplayReader</c> for free play) cashes each one out into a concrete effect. The
+    /// same intent legitimately means different things per context (e.g. <see cref="ModInputKind.Move"/>
+    /// steps menu focus, or steps the look cursor). Carrying the direction as a field rather than
+    /// as MoveNorth/MoveUp variants lets one handler branch on direction.
+    /// </summary>
+    public enum ModInputKind {
+        /// <summary>Directional. Carries Dx/Dy in {-1,0,1} (+x east, +y north). In a menu it steps
+        /// focus (orthogonal only); with the look cursor it steps the cursor one tile (8-way).</summary>
+        Move,
+
+        /// <summary>Confirm / activate the focused control (menus).</summary>
+        Confirm,
+
+        // Free-play spatial queries.
+        ReadHere,
+        Scan,
+        ReadStatus,
+        ReadHotbar,
+        Help,
+        RepeatLast,
+
+        // Look-cursor control.
+        LookToggle,
+        LookRecenter,
+        LookNextPoi,
+        LookPrevPoi,
+    }
+
+    /// <summary>
+    /// A recognized intent plus its optional directional payload. A value type, so the one-slot
+    /// pending input (<c>UiRuntime</c>) carries it without allocating.
+    /// </summary>
+    public struct ModInputAction {
+        public ModInputKind Kind;
+        public int Dx;
+        public int Dy;
+
+        /// <summary>A directional intent: Dx/Dy in {-1,0,1}, +x east, +y north.</summary>
+        public static ModInputAction Move(int dx, int dy) {
+            return new ModInputAction { Kind = ModInputKind.Move, Dx = dx, Dy = dy };
+        }
+
+        /// <summary>A payload-free intent (everything but <see cref="ModInputKind.Move"/>).</summary>
+        public static ModInputAction Of(ModInputKind kind) {
+            return new ModInputAction { Kind = kind };
+        }
+    }
+}

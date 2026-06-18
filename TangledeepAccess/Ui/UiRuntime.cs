@@ -1,38 +1,29 @@
-using TangledeepAccess.Gameplay;
-using TangledeepAccess.Ui;
+using TangledeepAccess.Controls;
 
 namespace TangledeepAccess {
     /// <summary>
-    /// Process-wide handle to the live <see cref="OverlayDispatcher"/> and the one-slot
-    /// pending navigation command. The dispatcher is created in <c>Plugin.Awake</c>; static
-    /// Harmony patches (which cannot hold instance state) reach it here to record game-driven
-    /// focus changes (<see cref="OverlayDispatcher.RecordGameFocus"/>) and to hand the
-    /// per-frame nav command from the input hook to the pump. Outside Core/ but Unity-free.
+    /// Process-wide handle to the live <see cref="Ui.OverlayDispatcher"/> and the one-slot pending
+    /// input. The dispatcher is created in <c>Plugin.Awake</c>; the static input handlers reach it
+    /// here to record game-driven focus changes (via the dispatcher) and to hand the per-frame
+    /// recognized input from the hook to the pump. Outside Core/ but Unity-free.
     /// </summary>
     internal static class UiRuntime {
-        internal static OverlayDispatcher Dispatcher;
+        internal static Ui.OverlayDispatcher Dispatcher;
 
-        // Set by the input hook (which runs during the game's input pump), consumed by
-        // Plugin.Update. One command per frame; latest wins.
-        private static NavCommand? _pendingNav;
+        // Set by the active input handler (which runs during the game's input pump), consumed by
+        // Plugin.Update. One recognized input per frame; latest wins. Carries its context so the
+        // pump routes it to the right realizer (the overlay dispatcher for menus, GameplayReader for
+        // free play) without re-deriving the context.
+        private static PendingInput? _pending;
 
-        internal static void SetPendingNav(NavCommand command) => _pendingNav = command;
-
-        internal static NavCommand? ConsumePendingNav() {
-            NavCommand? cmd = _pendingNav;
-            _pendingNav = null;
-            return cmd;
+        internal static void SetPendingInput(InputContext context, ModInputAction action) {
+            _pending = new PendingInput { Context = context, Action = action };
         }
 
-        // Gameplay spatial-query hotkey (read-here / scan), same hook-sets / pump-consumes split.
-        private static GameplayCommand? _pendingGameplay;
-
-        internal static void SetPendingGameplay(GameplayCommand command) => _pendingGameplay = command;
-
-        internal static GameplayCommand? ConsumePendingGameplay() {
-            GameplayCommand? cmd = _pendingGameplay;
-            _pendingGameplay = null;
-            return cmd;
+        internal static PendingInput? ConsumePendingInput() {
+            PendingInput? p = _pending;
+            _pending = null;
+            return p;
         }
     }
 }

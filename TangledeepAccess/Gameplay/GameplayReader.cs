@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using HarmonyLib;
+using TangledeepAccess.Controls;
 using TangledeepAccess.Focus;
 using TangledeepAccess.Speech;
 using UnityEngine;
@@ -13,11 +14,16 @@ namespace TangledeepAccess.Gameplay {
     /// Unity main thread from the per-frame pump; the input hook only requests the command.
     /// </summary>
     internal static class GameplayReader {
-        /// <summary>Speak the result of a gameplay query, or null if not in play.</summary>
-        public static string Execute(GameplayCommand command) {
+        /// <summary>
+        /// Realize a free-play input action (the Look and Gameplay contexts), or null if not in
+        /// play. <see cref="ModInputKind.Move"/> here means a look-cursor step — the menu context's
+        /// Move never reaches us. <see cref="ModInputKind.RepeatLast"/> is handled in the pump (it
+        /// owns the speech instance) and never arrives here.
+        /// </summary>
+        public static string Execute(ModInputAction action) {
             // Help is static text and useful even mid-transition, so answer it before the
             // in-play gate.
-            if (command == GameplayCommand.Help) {
+            if (action.Kind == ModInputKind.Help) {
                 return "Tangledeep Access commands. K, read here and exits. "
                     + "L, scan in view. Y, status. A, hotbar. Semicolon, look cursor; "
                     + "then arrows or numpad to move it, brackets to jump between things in view, "
@@ -29,45 +35,31 @@ namespace TangledeepAccess.Gameplay {
                 return null;
             }
 
-            switch (command) {
-                case GameplayCommand.LookToggle:
+            switch (action.Kind) {
+                case ModInputKind.LookToggle:
                     return LookCursor.Toggle();
-                case GameplayCommand.LookRecenter:
+                case ModInputKind.LookRecenter:
                     return LookCursor.Recenter();
-                case GameplayCommand.LookNorth:
-                    return LookCursor.Move(0, 1);
-                case GameplayCommand.LookSouth:
-                    return LookCursor.Move(0, -1);
-                case GameplayCommand.LookEast:
-                    return LookCursor.Move(1, 0);
-                case GameplayCommand.LookWest:
-                    return LookCursor.Move(-1, 0);
-                case GameplayCommand.LookNortheast:
-                    return LookCursor.Move(1, 1);
-                case GameplayCommand.LookNorthwest:
-                    return LookCursor.Move(-1, 1);
-                case GameplayCommand.LookSoutheast:
-                    return LookCursor.Move(1, -1);
-                case GameplayCommand.LookSouthwest:
-                    return LookCursor.Move(-1, -1);
-                case GameplayCommand.LookNextPoi:
+                case ModInputKind.Move:
+                    return LookCursor.Move(action.Dx, action.Dy);
+                case ModInputKind.LookNextPoi:
                     return LookCursor.JumpToPoi(1);
-                case GameplayCommand.LookPrevPoi:
+                case ModInputKind.LookPrevPoi:
                     return LookCursor.JumpToPoi(-1);
             }
 
             var message = new MessageBuilder();
-            switch (command) {
-                case GameplayCommand.ReadHere:
+            switch (action.Kind) {
+                case ModInputKind.ReadHere:
                     ReadHere(message, hero);
                     break;
-                case GameplayCommand.Scan:
+                case ModInputKind.Scan:
                     Scan(message, hero);
                     break;
-                case GameplayCommand.ReadStatus:
+                case ModInputKind.ReadStatus:
                     ReadStatus(message, hero);
                     break;
-                case GameplayCommand.ReadHotbar:
+                case ModInputKind.ReadHotbar:
                     ReadHotbar(message);
                     break;
             }

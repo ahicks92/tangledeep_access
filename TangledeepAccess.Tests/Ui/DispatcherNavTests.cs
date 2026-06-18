@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TangledeepAccess.Controls;
 using TangledeepAccess.Ui;
 using TangledeepAccess.Ui.Graph;
 using Xunit;
@@ -48,7 +49,7 @@ namespace TangledeepAccess.Tests.Ui {
             d.Register(() => OverlayResult.Active(overlay));
 
             d.Tick(); // settle at start "alpha"
-            TickResult r = d.Tick(NavCommand.Down);
+            TickResult r = d.Tick(ModInputAction.Move(0, -1)); // down
 
             Assert.Equal("beta", r.Speak);
             Assert.True(r.Moved);
@@ -64,7 +65,7 @@ namespace TangledeepAccess.Tests.Ui {
             d.Register(() => OverlayResult.Active(overlay));
 
             d.Tick(); // at "alpha", top edge
-            TickResult r = d.Tick(NavCommand.Up);
+            TickResult r = d.Tick(ModInputAction.Move(0, 1)); // up
 
             Assert.False(r.Moved); // nothing above
             Assert.Equal("alpha", r.Speak); // re-read current
@@ -79,7 +80,7 @@ namespace TangledeepAccess.Tests.Ui {
             d.Register(() => OverlayResult.Active(overlay));
 
             d.Tick(); // at "alpha"
-            TickResult r = d.Tick(NavCommand.Activate);
+            TickResult r = d.Tick(ModInputAction.Of(ModInputKind.Confirm));
 
             Assert.True(r.Activated);
             Assert.Same(a, r.FocusReference);
@@ -93,7 +94,7 @@ namespace TangledeepAccess.Tests.Ui {
             d.Register(() => OverlayResult.Active(overlay));
 
             d.Tick();
-            TickResult r = d.Tick(NavCommand.Activate);
+            TickResult r = d.Tick(ModInputAction.Of(ModInputKind.Confirm));
 
             Assert.True(clicked);
             Assert.False(r.Activated); // mod handled it; the game is not involved

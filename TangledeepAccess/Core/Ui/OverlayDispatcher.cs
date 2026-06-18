@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using TangledeepAccess.Controls;
 using TangledeepAccess.Speech;
 using TangledeepAccess.Ui.Graph;
 
@@ -57,7 +58,7 @@ namespace TangledeepAccess.Ui {
         /// caller should speak / sound / focus this tick. Must be called on the main thread
         /// because overlay callbacks read live game state.
         /// </summary>
-        public TickResult Tick(NavCommand? command = null) {
+        public TickResult Tick(ModInputAction? command = null) {
             OverlayResult result = FindActive();
 
             bool hasActive = result != null && result.Kind != OverlayResultKind.Inactive;
@@ -151,7 +152,7 @@ namespace TangledeepAccess.Ui {
         private TickResult BuildAndProcess(
             IUiOverlay overlay,
             object gameFocus,
-            NavCommand? command
+            ModInputAction? command
         ) {
             GraphState state;
             if (!_cache.TryGetValue(overlay.Id, out state)) {
@@ -192,11 +193,11 @@ namespace TangledeepAccess.Ui {
             GraphState state,
             OverlayCtx ctx,
             MessageBuilder message,
-            NavCommand command
+            ModInputAction command
         ) {
             var result = new TickResult();
 
-            if (command == NavCommand.Activate) {
+            if (command.Kind == ModInputKind.Confirm) {
                 ControlId cur = state.CurKey;
                 GraphNode node = null;
                 if (cur != null) {
@@ -219,7 +220,7 @@ namespace TangledeepAccess.Ui {
             }
 
             ControlId prev = state.CurKey;
-            graph.Move(ctx, ToDir(command));
+            graph.Move(ctx, ToDir(command.Dx, command.Dy));
             ControlId now = state.CurKey;
 
             result.Moved = prev == null || !prev.Equals(now);
@@ -256,17 +257,20 @@ namespace TangledeepAccess.Ui {
             return new TickResult { Speak = message.Build() };
         }
 
-        private static GraphDir ToDir(NavCommand command) {
-            switch (command) {
-                case NavCommand.Up:
-                    return GraphDir.Up;
-                case NavCommand.Right:
-                    return GraphDir.Right;
-                case NavCommand.Down:
-                    return GraphDir.Down;
-                default:
-                    return GraphDir.Left;
+        // A Move's (dx, dy) — +x east, +y north — to a menu graph direction. Menu nav only ever
+        // sends orthogonals, so the diagonal case never arises; north/south win the tie defensively.
+        private static GraphDir ToDir(int dx, int dy) {
+            if (dy > 0) {
+                return GraphDir.Up;
             }
+            if (dy < 0) {
+                return GraphDir.Down;
+            }
+            if (dx > 0) {
+                return GraphDir.Right;
+            }
+
+            return GraphDir.Left;
         }
 
         private static GraphRender BuildRender(IUiOverlay overlay, OverlayCtx ctx) {

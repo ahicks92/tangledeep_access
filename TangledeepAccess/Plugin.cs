@@ -3,6 +3,7 @@ using System.IO;
 using System.Reflection;
 using BepInEx;
 using HarmonyLib;
+using TangledeepAccess.Controls;
 using TangledeepAccess.Dev;
 using TangledeepAccess.Gameplay;
 using TangledeepAccess.Native;
@@ -98,11 +99,18 @@ namespace TangledeepAccess {
                     + " ready. Press slash for a list of commands.");
             }
 
-            // Single per-frame pump. The input hook (TDInputHandler prefix) stashes a nav
-            // command; we apply it through the dispatcher, then carry out the game-side
-            // effects it asks for. Speaking and game calls stay here, never in a Harmony hook.
-            NavCommand? command = UiRuntime.ConsumePendingNav();
-            TickResult result = _dispatcher.Tick(command);
+            // Single per-frame pump. The active input handler (in the game's input pump) stashed the
+            // recognized input for this frame, tagged with its context; we realize it here. The
+            // overlay dispatcher ticks every frame regardless — even with no input — to follow the
+            // game's own menu focus, so we feed it only a Menu-context action. Speaking and game
+            // calls stay here, never in a Harmony hook.
+            PendingInput? pending = UiRuntime.ConsumePendingInput();
+            ModInputAction? menuAction = null;
+            if (pending.HasValue && pending.Value.Context == InputContext.Menu) {
+                menuAction = pending.Value.Action;
+            }
+
+            TickResult result = _dispatcher.Tick(menuAction);
 
             // We moved under our own navigation: follow the game's focus to match and play
             // its move sound (the game didn't move it — we suppressed its input).
@@ -124,16 +132,19 @@ namespace TangledeepAccess {
                 _speech?.Speak(result.Speak);
             }
 
-            // On-demand spatial queries (read-here / scan) the gameplay hotkey hook requested.
-            // Explicit player queries interrupt, so the answer is immediate.
-            GameplayCommand? gameplay = UiRuntime.ConsumePendingGameplay();
-            if (gameplay == GameplayCommand.RepeatLast) {
-                // Re-speak the last phrase; handled here since the pump owns the speech instance.
-                _speech?.Speak(_speech.LastSpoken);
-            } else if (gameplay.HasValue) {
-                string spoken = GameplayReader.Execute(gameplay.Value);
-                if (!string.IsNullOrEmpty(spoken)) {
-                    _speech?.Speak(spoken);
+            // Free-play input the look/gameplay hook recognized: look-cursor steps and on-demand
+            // spatial queries (read-here / scan). Explicit player queries interrupt, so the answer
+            // is immediate.
+            if (pending.HasValue && pending.Value.Context != InputContext.Menu) {
+                ModInputAction action = pending.Value.Action;
+                if (action.Kind == ModInputKind.RepeatLast) {
+                    // Re-speak the last phrase; handled here since the pump owns the speech instance.
+                    _speech?.Speak(_speech.LastSpoken);
+                } else {
+                    string spoken = GameplayReader.Execute(action);
+                    if (!string.IsNullOrEmpty(spoken)) {
+                        _speech?.Speak(spoken);
+                    }
                 }
             }
 
