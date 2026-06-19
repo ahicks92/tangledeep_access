@@ -36,7 +36,7 @@ namespace TangledeepAccess.Gameplay {
                     continue;
                 }
 
-                string name = GameLabelReader.Clean(actor.displayName);
+                string name = GameLabelReader.Clean(actor.displayName) ?? SpecialActorName(actor);
                 if (name != null && seen.Add(Key(name, p))) {
                     found.Add(Make(name, actor.actorfaction == Faction.ENEMY, hp, p, actor));
                 }
@@ -66,6 +66,24 @@ namespace TangledeepAccess.Gameplay {
             }
 
             return found;
+        }
+
+        // Stairs and portals carry an empty displayName, so the generic name filter drops them even
+        // though they are real, scannable points of interest. Give them a short synthesized label;
+        // other unnamed actors stay unnamed (and skipped).
+        private static string SpecialActorName(Actor actor) {
+            if (actor.GetActorType() != ActorTypes.STAIRS) {
+                return null;
+            }
+
+            Stairs stairs = actor as Stairs;
+            if (stairs == null) {
+                return null;
+            }
+            if (stairs.isPortal) {
+                return "portal";
+            }
+            return stairs.stairsUp ? "stairs up" : "stairs down";
         }
 
         private static bool IsVisible(HeroPC hero, Vector2 p) {
