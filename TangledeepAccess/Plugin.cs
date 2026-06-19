@@ -74,6 +74,7 @@ namespace TangledeepAccess {
             _dispatcher.Register(new NameEntryOverlay().Handler);       // NAMEINPUT, deciding
             _dispatcher.Register(new BeginScreenOverlay().Handler);     // NAMEINPUT, ready
             _dispatcher.Register(new SaveSlotOverlay().Handler);        // SELECTSLOT
+            _dispatcher.Register(new InventoryOverlay().Handler);       // I tab, consumables
             UiRuntime.Dispatcher = _dispatcher;
 
             try {
