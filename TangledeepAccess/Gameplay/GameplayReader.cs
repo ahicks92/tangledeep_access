@@ -70,28 +70,6 @@ namespace TangledeepAccess.Gameplay {
         public static MessageBuilder Execute(ModInputAction action) {
             var message = new MessageBuilder();
 
-            // Help is static text and useful even mid-transition, so answer it before the
-            // in-play gate. It is one authored paragraph, so it is a single fragment.
-            if (action.Kind == ModInputKind.Help) {
-                return message.Fragment(
-                    "Tangledeep Access commands. S, read your tile and surroundings. Y, status. "
-                    + "The exploration cursor: K reads the cursor's tile; U I O, J L, M comma period "
-                    + "move it in eight directions; hold shift to skip to the next terrain change or "
-                    + "creature; Alt K toggles whether it follows you, on by default; Ctrl K returns "
-                    + "it to you. "
-                    + "Backtick, cycle hotbar and read it. "
-                    + "Page up and page down, step scanner entries; control plus page up or down, "
-                    + "step scanner categories, starting from all; Home points the cursor at the "
-                    + "selected one; End rescans. "
-                    + "Navigation aids sit on F keys. F1 is wall echo: shift F1 toggles it on or off "
-                    + "(on by default), control F1 fires it once. F2 is the entity scanner: control F2 "
-                    + "toggles a continuous sweep of things in view, panned by side-to-side position "
-                    + "and pitched by how far north or south. "
-                    + "F8, F9, F10, lower music, sound, footsteps volume; hold shift to raise. "
-                    + "Control left or right bracket, scroll back or forward through the combat log. "
-                    + "Apostrophe, repeat. Slash, this help.");
-            }
-
             HeroPC hero = GameMasterScript.heroPCActor;
             if (hero == null || !GameMasterScript.actualGameStarted || MapMasterScript.activeMap == null) {
                 return null;

@@ -108,12 +108,12 @@ namespace TangledeepAccess {
             }
 
             // Speak a one-time "ready" line once the backend has had a few frames to come up,
-            // so the player knows the mod is active and how to discover its commands.
+            // so the player knows the mod is active.
             if (_startupFrames >= 0 && --_startupFrames < 0) {
                 _speech?.Speak(new MessageBuilder()
                     .Fragment(PluginName)
                     .Fragment(PluginVersion)
-                    .Fragment("ready. Press slash for a list of commands."));
+                    .Fragment("ready."));
             }
 
             // Poll the non-keyboard input sources before draining, so any event they emit this

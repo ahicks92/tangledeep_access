@@ -180,7 +180,6 @@ In free play (no menu/dialog open):
   Hotbars" — Ctrl is the screen reader's stop-speech key, so the mod strips that binding on
   load (see `KeymapPatch`) and owns the cycle itself.
 - ' (apostrophe): repeat the last spoken phrase
-- / (slash): help — speak the list of mod commands
 - ; (semicolon): toggle the Look cursor (examine the map without moving)
 
 In menus and overlays (inventory, skill sheet, dialogs — the active overlay owns input):

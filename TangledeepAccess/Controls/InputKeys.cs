@@ -76,7 +76,7 @@ namespace TangledeepAccess.Controls {
 
         /// <summary>
         /// Free-play query hotkeys, the gameplay drainer's set: S reads the player's own tile, Y
-        /// status, apostrophe repeat, slash help. Cursor reads (K) live with the cursor drainer in
+        /// status, apostrophe repeat. Cursor reads (K) live with the cursor drainer in
         /// <see cref="CursorKeys"/>; the hotbar keys live in <see cref="Hotbar"/>, claimed by a
         /// top-priority drainer so they work inside menus too.
         /// </summary>
@@ -89,9 +89,6 @@ namespace TangledeepAccess.Controls {
             }
             if (Input.GetKeyDown(KeyCode.Quote)) {
                 return ModInputAction.Of(ModInputKind.RepeatLast);
-            }
-            if (Input.GetKeyDown(KeyCode.Slash)) {
-                return ModInputAction.Of(ModInputKind.Help);
             }
 
             // Combat-log history: Ctrl+[ steps to the older message, Ctrl+] to the newer. The game
