@@ -14,6 +14,11 @@ namespace TangledeepAccess.Controls {
         /// focus (orthogonal only); with the exploration cursor it steps the cursor one tile (8-way).</summary>
         Move,
 
+        /// <summary>Directional, like <see cref="Move"/>, but in a menu it skips focus as far as
+        /// possible in the direction — the last reachable control in that row/column (Shift+direction).
+        /// Carries Dx/Dy in {-1,0,1} the same way; orthogonal only.</summary>
+        MoveToEdge,
+
         /// <summary>Confirm / activate the focused control (menus).</summary>
         Confirm,
 
@@ -104,6 +109,11 @@ namespace TangledeepAccess.Controls {
         /// <summary>A directional intent: Dx/Dy in {-1,0,1}, +x east, +y north.</summary>
         public static ModInputAction Move(int dx, int dy) {
             return new ModInputAction { Kind = ModInputKind.Move, Dx = dx, Dy = dy };
+        }
+
+        /// <summary>A directional skip-to-edge intent: same Dx/Dy convention as <see cref="Move"/>.</summary>
+        public static ModInputAction MoveToEdge(int dx, int dy) {
+            return new ModInputAction { Kind = ModInputKind.MoveToEdge, Dx = dx, Dy = dy };
         }
 
         /// <summary>A payload-free intent (everything but <see cref="ModInputKind.Move"/>).</summary>

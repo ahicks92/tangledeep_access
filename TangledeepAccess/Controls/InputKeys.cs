@@ -10,22 +10,26 @@ namespace TangledeepAccess.Controls {
     internal static class InputKeys {
         /// <summary>Menu navigation: arrows step focus, Enter confirms, K reads the focused
         /// control's detailed info (the game's hover-tooltip equivalent), F toggles favorite, and
-        /// Minus toggles trash. Orthogonal nav only. Claimed only while an overlay owns input, so
-        /// these shadow the game's own bindings (F is also "fire ranged weapon" in free play, K is
-        /// the gameplay drainer's "read here") without conflict — different context, and
-        /// MenuInputDrainer has priority.</summary>
+        /// Minus toggles trash. Holding Shift turns a direction into a skip — focus jumps as far as
+        /// the row/column reaches (home/end). The arrow keys are mirrored on the WAXD cluster
+        /// (W/X up/down, A/D left/right) so the whole menu is reachable one-handed. Orthogonal nav
+        /// only. Claimed only while an overlay owns input, so these shadow the game's own bindings
+        /// (F is also "fire ranged weapon" in free play, K is the gameplay drainer's "read here",
+        /// WAXD are game movement) without conflict — different context, and MenuInputDrainer has
+        /// priority.</summary>
         public static ModInputAction? MenuNav() {
-            if (Input.GetKeyDown(KeyCode.UpArrow)) {
-                return ModInputAction.Move(0, 1);
+            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) {
+                return Nav(shift, 0, 1);
             }
-            if (Input.GetKeyDown(KeyCode.DownArrow)) {
-                return ModInputAction.Move(0, -1);
+            if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.X)) {
+                return Nav(shift, 0, -1);
             }
-            if (Input.GetKeyDown(KeyCode.LeftArrow)) {
-                return ModInputAction.Move(-1, 0);
+            if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) {
+                return Nav(shift, -1, 0);
             }
-            if (Input.GetKeyDown(KeyCode.RightArrow)) {
-                return ModInputAction.Move(1, 0);
+            if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) {
+                return Nav(shift, 1, 0);
             }
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) {
                 return ModInputAction.Of(ModInputKind.Confirm);
@@ -59,6 +63,11 @@ namespace TangledeepAccess.Controls {
             return null;
         }
 
+        // A menu direction: a plain step, or a skip-to-edge when Shift is held.
+        private static ModInputAction Nav(bool shift, int dx, int dy) {
+            return shift ? ModInputAction.MoveToEdge(dx, dy) : ModInputAction.Move(dx, dy);
+        }
+
         /// <summary>
         /// True while any menu-nav key is held (not just the key-down frame). Lets a context whose
         /// own pump auto-repeats (the title screen) stay suppressed on the repeat frames, so a held
@@ -69,6 +78,10 @@ namespace TangledeepAccess.Controls {
                 || Input.GetKey(KeyCode.DownArrow)
                 || Input.GetKey(KeyCode.LeftArrow)
                 || Input.GetKey(KeyCode.RightArrow)
+                || Input.GetKey(KeyCode.W)
+                || Input.GetKey(KeyCode.X)
+                || Input.GetKey(KeyCode.A)
+                || Input.GetKey(KeyCode.D)
                 || Input.GetKey(KeyCode.Return)
                 || Input.GetKey(KeyCode.KeypadEnter);
         }

@@ -56,6 +56,50 @@ namespace TangledeepAccess.Tests.Ui {
             Assert.Same(b, r.FocusReference);
         }
 
+        private static RefOverlay ThreeItem(out object a, out object b, out object c) {
+            a = new object();
+            b = new object();
+            c = new object();
+            var o = new RefOverlay();
+            o.Items.Add((a, "alpha"));
+            o.Items.Add((b, "beta"));
+            o.Items.Add((c, "gamma"));
+            return o;
+        }
+
+        [Fact]
+        public void SkipToEdgeJumpsPastIntermediateControls() {
+            object a,
+                b,
+                c;
+            var overlay = ThreeItem(out a, out b, out c);
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(overlay));
+
+            d.Tick(); // settle at start "alpha"
+            TickResult r = d.Tick(ModInputAction.MoveToEdge(0, -1)); // skip down
+
+            Assert.Equal("gamma", r.Message?.Build()); // jumped past "beta" to the last control
+            Assert.True(r.Moved);
+            Assert.Same(c, r.FocusReference);
+        }
+
+        [Fact]
+        public void SkipToEdgeAtEdgeDoesNotReportMove() {
+            object a,
+                b,
+                c;
+            var overlay = ThreeItem(out a, out b, out c);
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(overlay));
+
+            d.Tick(); // at "alpha", top edge
+            TickResult r = d.Tick(ModInputAction.MoveToEdge(0, 1)); // skip up — nothing above
+
+            Assert.False(r.Moved);
+            Assert.Equal("alpha", r.Message?.Build()); // re-read current
+        }
+
         [Fact]
         public void NavigateAtEdgeDoesNotReportMove() {
             object a,

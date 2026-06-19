@@ -246,8 +246,16 @@ namespace TangledeepAccess.Ui {
                 return result;
             }
 
+            // The only kinds left are the two directional ones: Move steps one control, MoveToEdge
+            // skips as far as the row/column reaches. Both speak the landing label into the message
+            // and report a real move the same way.
             ControlId prev = state.CurKey;
-            graph.Move(ctx, ToDir(command.Dx, command.Dy));
+            GraphDir dir = ToDir(command.Dx, command.Dy);
+            if (command.Kind == ModInputKind.MoveToEdge) {
+                graph.MoveToEdge(ctx, dir);
+            } else {
+                graph.Move(ctx, dir);
+            }
             ControlId now = state.CurKey;
 
             result.Moved = prev == null || !prev.Equals(now);
