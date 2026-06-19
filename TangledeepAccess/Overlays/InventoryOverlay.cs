@@ -202,8 +202,8 @@ namespace TangledeepAccess.Overlays {
 
                 AddItemActionStub(builder, uid, primary);
                 AddItemActionStub(builder, uid, "drop");
-                AddItemActionStub(builder, uid, item.favorite ? "unfavorite" : "favorite");
-                AddItemActionStub(builder, uid, item.vendorTrash ? "untrash" : "trash");
+                AddFavoriteCell(builder, uid, item);
+                AddTrashCell(builder, uid, item);
 
                 builder.EndRow();
             }
@@ -231,6 +231,49 @@ namespace TangledeepAccess.Overlays {
                 ControlId.Structural("inv:action:" + verb + ":" + uid),
                 ctx => ctx.Message.Fragment(verb),
                 (ctx, mods) => ctx.Message.Fragment(verb + ", not yet implemented")
+            );
+        }
+
+        // Favorite and trash are mutually exclusive flags (setting one clears the other). We flip
+        // them directly rather than via the game's MarkItemFavorite/MarkItemTrash, which look up the
+        // on-screen button and early-return — skipping the mutual-exclusion clear — for any item
+        // outside the game's 16-wide visible window. The structural key is a stable slug ("fav" /
+        // "trash"), not the state-dependent label, so toggling does not change the node's identity
+        // and the cursor stays put. We do NOT re-sort: a player marking several items in a row keeps
+        // a stable list (favorites only reorder to the top on the next manual sort / reopen).
+        private static void AddFavoriteCell(IOverlayBuilder builder, int uid, Item item) {
+            builder.AddClickable(
+                ControlId.Structural("inv:action:fav:" + uid),
+                ctx => ctx.Message.Fragment(item.favorite ? "unfavorite" : "favorite"),
+                (ctx, mods) => {
+                    item.favorite = !item.favorite;
+                    if (item.favorite) {
+                        item.vendorTrash = false;
+                        UIManagerScript.PlayCursorSound("GetSparkle");
+                        ctx.Message.Fragment("favorited");
+                    } else {
+                        UIManagerScript.PlayCursorSound("UITock");
+                        ctx.Message.Fragment("no longer favorite");
+                    }
+                }
+            );
+        }
+
+        private static void AddTrashCell(IOverlayBuilder builder, int uid, Item item) {
+            builder.AddClickable(
+                ControlId.Structural("inv:action:trash:" + uid),
+                ctx => ctx.Message.Fragment(item.vendorTrash ? "untrash" : "trash"),
+                (ctx, mods) => {
+                    item.vendorTrash = !item.vendorTrash;
+                    if (item.vendorTrash) {
+                        item.favorite = false;
+                        UIManagerScript.PlayCursorSound("UITick");
+                        ctx.Message.Fragment("marked as trash");
+                    } else {
+                        UIManagerScript.PlayCursorSound("UITock");
+                        ctx.Message.Fragment("no longer trash");
+                    }
+                }
             );
         }
     }
