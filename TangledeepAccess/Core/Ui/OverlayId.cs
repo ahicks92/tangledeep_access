@@ -30,7 +30,6 @@ namespace TangledeepAccess.Ui {
         Skills,
         CharacterSheet,
         Shop,
-        Targeting,
 
         // Mod-only UIs (no game widget) go below here as they are added.
     }
