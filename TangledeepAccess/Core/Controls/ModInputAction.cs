@@ -54,6 +54,12 @@ namespace TangledeepAccess.Controls {
         Help,
         RepeatLast,
 
+        // Combat-log history scrollback (free play). Step a browse cursor through the captured
+        // game-log lines: Prev is older (Ctrl+[), Next is newer (Ctrl+]). A new logged line snaps
+        // the cursor back to the latest.
+        LogHistoryPrev,
+        LogHistoryNext,
+
         // Audio volume nudges (free play). Dx carries the direction: +1 louder, -1 quieter.
         // A hacky one-time tuning aid — music drowns out speech/cues by default.
         VolumeMusic,
@@ -75,12 +81,16 @@ namespace TangledeepAccess.Controls {
         CursorRecenter,
 
         // Scanner: navigating the categorized, distance-sorted map readout. Two axes —
-        // category (the broad bucket) and entry (one feature within it). Modeless: the
-        // scanner keeps its selection between presses, no toggle.
+        // category (the broad bucket, with an "all" bucket spanning every feature) and entry
+        // (one feature within it). Modeless: the scanner keeps its selection between presses,
+        // no toggle. The list is a snapshot rebuilt only on ScanRescan; ScanGoto points the
+        // exploration cursor at the selected feature.
         ScanNextCategory,
         ScanPrevCategory,
         ScanNextEntry,
         ScanPrevEntry,
+        ScanGoto,
+        ScanRescan,
     }
 
     /// <summary>

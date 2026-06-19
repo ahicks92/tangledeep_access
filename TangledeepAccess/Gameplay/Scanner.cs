@@ -7,13 +7,15 @@ using UnityEngine;
 namespace TangledeepAccess.Gameplay {
     /// <summary>
     /// The broad buckets the scanner sorts map features into — the top axis of navigation
-    /// ("what kind of thing, in general?"). Coarse on purpose: the boundaries are a first guess
-    /// pending real UX, and <see cref="Scanner.Categorize"/> is a single switch that is trivial to
-    /// re-cut (e.g. splitting shops out of <see cref="Services"/> on <c>NPC.shopRef</c>). The order
+    /// ("what kind of thing, in general?"). <see cref="All"/> is the catch-all spanning every other
+    /// bucket and is the default selection. The rest are coarse on purpose: the boundaries are a first
+    /// guess pending real UX, and <see cref="Scanner.Categorize"/> is a single switch that is trivial
+    /// to re-cut (e.g. splitting shops out of <see cref="Services"/> on <c>NPC.shopRef</c>). The order
     /// here is not the iteration order — that is <see cref="Scanner.Order"/> — and <see cref="Other"/>
     /// is the unclassified fallback, deliberately left out of iteration so it is never surfaced.
     /// </summary>
     public enum ScanCategory {
+        All,
         Monsters,
         Items,
         Services,
@@ -24,25 +26,26 @@ namespace TangledeepAccess.Gameplay {
 
     /// <summary>
     /// One navigable feature in the scanner: a single actor, identified by its stable
-    /// <c>actorUniqueID</c> so selection survives a rebuild without ever caching the actor. Name and
-    /// offset are recomputed live at build time. Today one entry is exactly one actor; the
-    /// "instance" grouping (several actors collapsed into one entry — a pack, a scattered item pile)
-    /// is the deferred third axis, and the seam for it is the group step in <see cref="Scanner.Build"/>.
+    /// <c>actorUniqueID</c> so it survives the live re-query at speak time without ever caching the
+    /// actor itself. <see cref="Category"/> and the snapshot position (<see cref="X"/>/<see cref="Y"/>,
+    /// with <see cref="Manhattan"/> for the sort) are frozen at rescan — they fix the list's membership
+    /// and order. Name and the spoken offset are recomputed live from the resolved actor, so what you
+    /// hear tracks the world even though the list itself does not reshuffle until the next rescan.
     /// </summary>
     internal struct ScanEntry {
         public int ActorId;
-        public string Name;
-        public int Dx;
-        public int Dy;
-        public int Steps; // king-move distance from the hero, for nearest-first ordering
+        public ScanCategory Category;
+        public int X; // snapshot tile position, the sort tie-breaker and the fallback for a gone actor
+        public int Y;
+        public int Manhattan; // |dx| + |dy| from the hero at rescan, the primary sort key
     }
 
     /// <summary>
     /// Input for the scanner, beside the state it drives — the same drainer+module split as the look
-    /// cursor. Modeless: it claims only its four dedicated nav keys (comma/period for entries, 9/0 for
-    /// categories) and passes everything else straight through, so it never fights the look cursor's
-    /// arrows or the game's movement. The keys carry no payload; <see cref="Scanner"/> holds the
-    /// selection and produces the speech.
+    /// cursor. Modeless: it claims only its dedicated nav keys (Page Up/Down for entries, Ctrl+Page
+    /// Up/Down for categories, Home to point the cursor, End to rescan) and passes everything else
+    /// straight through, so it never fights the look cursor's arrows or the game's movement. The keys
+    /// carry no payload; <see cref="Scanner"/> holds the selection and produces the speech.
     /// </summary>
     public sealed class ScannerInputDrainer : InputDrainer {
         public static readonly ScannerInputDrainer Instance = new ScannerInputDrainer();
@@ -58,25 +61,34 @@ namespace TangledeepAccess.Gameplay {
         }
 
         public override void Realize(ModInputAction action, PrismSpeech speech) {
-            // This drainer owns the message: one builder per press, handed to the scanner to append
-            // to, so scanner output composes like any other (no nested builders, no re-injected strings).
-            var message = new MessageBuilder();
+            // Each verb returns its own one-per-press builder (so Home can hand back the exploration
+            // cursor's own readout builder directly — one builder, spoken once, never nested).
+            MessageBuilder spoken;
             switch (action.Kind) {
                 case ModInputKind.ScanNextCategory:
-                    Scanner.NextCategory(message);
+                    spoken = Scanner.NextCategory();
                     break;
                 case ModInputKind.ScanPrevCategory:
-                    Scanner.PrevCategory(message);
+                    spoken = Scanner.PrevCategory();
                     break;
                 case ModInputKind.ScanNextEntry:
-                    Scanner.NextEntry(message);
+                    spoken = Scanner.NextEntry();
                     break;
                 case ModInputKind.ScanPrevEntry:
-                    Scanner.PrevEntry(message);
+                    spoken = Scanner.PrevEntry();
+                    break;
+                case ModInputKind.ScanGoto:
+                    spoken = Scanner.Goto();
+                    break;
+                case ModInputKind.ScanRescan:
+                    spoken = Scanner.Rescan();
+                    break;
+                default:
+                    spoken = null;
                     break;
             }
 
-            speech.Speak(message);
+            speech.Speak(spoken);
         }
     }
 
@@ -84,23 +96,33 @@ namespace TangledeepAccess.Gameplay {
     /// A categorized, distance-sorted readout of the map's actor-features — the non-visual analog of
     /// the minimap, modeled on Factorio Access's scanner but radically simplified: Tangledeep floors
     /// are small and every feature is a single tile (no multi-tile entities), so there is no
-    /// background crawling, clustering, or bounding-box machinery. The whole structure is rebuilt
-    /// live on every keypress by walking <c>actorsInMap</c>; nothing is cached but the selection,
-    /// which is a stable <c>actorUniqueID</c> re-resolved each time.
+    /// background crawling, clustering, or bounding-box machinery.
     ///
-    /// <para>Two navigation axes for now: category (the broad bucket) and entry (one feature within
-    /// it, nearest first). The third Factorio axis — grouping several actors into one "instance" — is
-    /// deliberately deferred; the data model leaves the seam open (see <see cref="Build"/>).</para>
+    /// <para><b>Snapshot model.</b> The list is a snapshot — built once by walking <c>actorsInMap</c>,
+    /// then held — so paging through it never reshuffles under you as monsters move. The snapshot
+    /// freezes only the <em>membership and order</em> (the actor ids, their category, and the
+    /// nearest-first sort); pressing End ("rescan") rebuilds it, and it auto-rebuilds on a map change.
+    /// Per the project's no-stale-speech rule, the per-entry name and offset are NOT frozen: each is
+    /// re-queried from the live actor (resolved by id) at speak time, so a moved monster's offset is
+    /// current and a vanished one reads "gone". Sort uses Manhattan distance from the hero at rescan,
+    /// ties broken by tile x then y.</para>
+    ///
+    /// <para>Two navigation axes: category (the broad bucket, defaulting to <see cref="ScanCategory.All"/>)
+    /// and entry (one feature within it, nearest first). Category navigation just re-filters the held
+    /// snapshot — it does not rebuild. <see cref="Goto"/> (Home) points the exploration cursor at the
+    /// selected feature and speaks the cursor's own readout. The third Factorio axis — grouping several
+    /// actors into one "instance" — is deliberately deferred; the seam is the build step.</para>
     ///
     /// <para>Visibility follows the minimap, not line of sight: a feature is surfaced only on an
-    /// <em>explored</em> tile (the single explored predicate in <see cref="Build"/>), so the scanner
-    /// never reveals ground the player has not yet seen. That is parity with the sighted minimap,
-    /// which is a live view of the whole explored map.</para>
+    /// <em>explored</em> tile (the single explored predicate in <see cref="BuildSnapshot"/>), so the
+    /// scanner never reveals ground the player has not yet seen. That is parity with the sighted
+    /// minimap, which is a live view of the whole explored map.</para>
     /// </summary>
     internal static class Scanner {
-        // Iteration order for category navigation. Other is omitted so unclassified actors never
-        // surface. This order is arbitrary and easy to change.
+        // Iteration order for category navigation. All leads (the default); Other is omitted so
+        // unclassified actors never surface. This order is arbitrary and easy to change.
         private static readonly ScanCategory[] Order = {
+            ScanCategory.All,
             ScanCategory.Monsters,
             ScanCategory.Stairs,
             ScanCategory.Services,
@@ -108,14 +130,21 @@ namespace TangledeepAccess.Gameplay {
             ScanCategory.Objects,
         };
 
-        private static ScanCategory _category = ScanCategory.Monsters;
+        // The held snapshot (null = never scanned yet) and the map it was taken on, so a level change
+        // forces a rebuild. A live map reference is the one sanctioned "cache" — we compare identity,
+        // never read stale state from it.
+        private static List<ScanEntry> _snapshot;
+        private static Map _snapshotMap;
+
+        private static ScanCategory _category = ScanCategory.All;
         private static int _selectedId; // actorUniqueID of the current entry, 0 = nothing selected
 
         /// <summary>
         /// Which category a map feature belongs to — the requested classifier. Coarse and keyed only
         /// on <see cref="ActorTypes"/> for v1; the hero is excluded before this is called, so it never
-        /// returns a category for the player. Splitting shops out of services is a one-line change:
-        /// add a case for <c>NPC</c> with a non-empty <c>shopRef</c>.
+        /// returns a category for the player. Never returns <see cref="ScanCategory.All"/> — that is a
+        /// view spanning the others, not a bucket an actor lands in. Splitting shops out of services is
+        /// a one-line change: add a case for <c>NPC</c> with a non-empty <c>shopRef</c>.
         /// </summary>
         public static ScanCategory Categorize(Actor a) {
             switch (a.GetActorType()) {
@@ -135,83 +164,169 @@ namespace TangledeepAccess.Gameplay {
         }
 
         /// <summary>Step to the next non-empty category and append its nearest entry.</summary>
-        public static void NextCategory(MessageBuilder message) {
-            StepCategory(message, 1);
+        public static MessageBuilder NextCategory() {
+            return StepCategory(1);
         }
 
         /// <summary>Step to the previous non-empty category and append its nearest entry.</summary>
-        public static void PrevCategory(MessageBuilder message) {
-            StepCategory(message, -1);
+        public static MessageBuilder PrevCategory() {
+            return StepCategory(-1);
         }
 
         /// <summary>Move to the next entry within the current category, wrapping, and append it.</summary>
-        public static void NextEntry(MessageBuilder message) {
-            StepEntry(message, 1);
+        public static MessageBuilder NextEntry() {
+            return StepEntry(1);
         }
 
         /// <summary>Move to the previous entry within the current category, wrapping, and append it.</summary>
-        public static void PrevEntry(MessageBuilder message) {
-            StepEntry(message, -1);
+        public static MessageBuilder PrevEntry() {
+            return StepEntry(-1);
         }
 
-        /// <summary>Forget the selection (e.g. on a level change). Mirrors the look cursor's reset.</summary>
+        /// <summary>Forget the snapshot and selection (e.g. on a level change). The next navigation
+        /// rescans; a map change also auto-rescans, so this is belt-and-suspenders.</summary>
         public static void Reset() {
+            _snapshot = null;
+            _snapshotMap = null;
             _selectedId = 0;
+            _category = ScanCategory.All;
         }
 
         // --- Navigation ---
 
-        private static void StepCategory(MessageBuilder message, int dir) {
+        private static MessageBuilder StepCategory(int dir) {
+            var message = new MessageBuilder();
             HeroPC hero = GameMasterScript.heroPCActor;
             if (hero == null || MapMasterScript.activeMap == null) {
-                return;
+                return message;
+            }
+
+            if (!EnsureSnapshot(hero)) {
+                message.Fragment("nothing in range");
+                return message;
             }
 
             int start = IndexOf(_category);
-            // Skip empty categories; wrap. i runs a full lap so we land back on the current
-            // category only if it is the single non-empty one.
+            // Skip empty categories; wrap. i runs a full lap so we land back on the current category
+            // only if it is the single non-empty one. All is never empty while the snapshot is.
             for (int i = 1; i <= Order.Length; i++) {
                 int idx = ((start + dir * i) % Order.Length + Order.Length) % Order.Length;
                 ScanCategory cat = Order[idx];
-                List<ScanEntry> entries = Build(cat, hero);
-                if (entries.Count == 0) {
+                List<ScanEntry> view = View(cat);
+                if (view.Count == 0) {
                     continue;
                 }
 
                 _category = cat;
-                _selectedId = entries[0].ActorId;
-                SpeakCategory(message, cat, entries, 0);
-                return;
+                _selectedId = view[0].ActorId;
+                SpeakCategory(message, cat, view, 0);
+                return message;
             }
 
             message.Fragment("nothing in range");
+            return message;
         }
 
-        private static void StepEntry(MessageBuilder message, int dir) {
+        private static MessageBuilder StepEntry(int dir) {
+            var message = new MessageBuilder();
             HeroPC hero = GameMasterScript.heroPCActor;
             if (hero == null || MapMasterScript.activeMap == null) {
-                return;
+                return message;
             }
 
-            List<ScanEntry> entries = Build(_category, hero);
-            // First use, or the current category emptied out: bootstrap onto the first non-empty
-            // category instead of saying nothing.
-            if (entries.Count == 0) {
-                StepCategory(message, dir);
-                return;
+            if (!EnsureSnapshot(hero)) {
+                message.Fragment("nothing in range");
+                return message;
             }
 
-            int cur = IndexOfId(entries, _selectedId);
+            List<ScanEntry> view = View(_category);
+            if (view.Count == 0) {
+                // The current category filtered to nothing (e.g. it emptied while All stayed live):
+                // bootstrap onto the next non-empty category instead of saying nothing.
+                return StepCategory(dir);
+            }
+
+            int cur = IndexOfId(view, _selectedId);
             int next = cur < 0
-                ? (dir > 0 ? 0 : entries.Count - 1)
-                : (cur + dir + entries.Count) % entries.Count;
-            _selectedId = entries[next].ActorId;
-            SpeakEntry(message, entries[next], next, entries.Count);
+                ? (dir > 0 ? 0 : view.Count - 1)
+                : (cur + dir + view.Count) % view.Count;
+            _selectedId = view[next].ActorId;
+            SpeakEntry(message, view[next], next, view.Count);
+            return message;
         }
 
-        // --- Build (live, never cached) ---
+        /// <summary>
+        /// Point the exploration cursor at the selected feature and speak the cursor's own readout
+        /// (Home). Resolves the actor live by id so the cursor lands on where it actually is now; if it
+        /// is gone, falls back to its snapshot tile. Returns the cursor's readout builder directly.
+        /// </summary>
+        public static MessageBuilder Goto() {
+            HeroPC hero = GameMasterScript.heroPCActor;
+            Map map = MapMasterScript.activeMap;
+            if (hero == null || map == null) {
+                return null;
+            }
 
-        private static List<ScanEntry> Build(ScanCategory cat, HeroPC hero) {
+            if (!EnsureSnapshot(hero)) {
+                return new MessageBuilder().Fragment("nothing in range");
+            }
+
+            List<ScanEntry> view = View(_category);
+            int cur = IndexOfId(view, _selectedId);
+            if (cur < 0) {
+                return new MessageBuilder().Fragment("nothing selected");
+            }
+
+            ScanEntry entry = view[cur];
+            Actor a = map.FindActorByID(entry.ActorId);
+            Vector2 target = a != null ? a.GetPos() : new Vector2(entry.X, entry.Y);
+            return ExplorationCursor.JumpTo(target);
+        }
+
+        /// <summary>
+        /// Rescan (End): rebuild the snapshot from the live map, reset to <see cref="ScanCategory.All"/>,
+        /// select the nearest feature, and speak the fresh readout.
+        /// </summary>
+        public static MessageBuilder Rescan() {
+            var message = new MessageBuilder();
+            HeroPC hero = GameMasterScript.heroPCActor;
+            if (hero == null || MapMasterScript.activeMap == null) {
+                return message;
+            }
+
+            DoRescan(hero);
+            message.Fragment("rescanned");
+            List<ScanEntry> view = View(_category);
+            if (view.Count == 0) {
+                message.ListItem("nothing in range");
+                return message;
+            }
+
+            message.ListItem();
+            SpeakCategory(message, _category, view, 0);
+            return message;
+        }
+
+        // --- Snapshot (built on rescan / first use / map change, then held) ---
+
+        // Ensure a snapshot exists for the current map, building one if absent or stale. Returns
+        // whether it has any entries.
+        private static bool EnsureSnapshot(HeroPC hero) {
+            if (_snapshot == null || _snapshotMap != MapMasterScript.activeMap) {
+                DoRescan(hero);
+            }
+
+            return _snapshot.Count > 0;
+        }
+
+        private static void DoRescan(HeroPC hero) {
+            _snapshot = BuildSnapshot(hero);
+            _snapshotMap = MapMasterScript.activeMap;
+            _category = ScanCategory.All;
+            _selectedId = _snapshot.Count > 0 ? _snapshot[0].ActorId : 0;
+        }
+
+        private static List<ScanEntry> BuildSnapshot(HeroPC hero) {
             var list = new List<ScanEntry>();
             Map map = MapMasterScript.activeMap;
             if (map == null) {
@@ -220,6 +335,8 @@ namespace TangledeepAccess.Gameplay {
 
             bool[,] explored = map.exploredTiles;
             Vector2 hp = hero.GetPos();
+            int hx = (int)hp.x;
+            int hy = (int)hp.y;
             foreach (Actor a in map.actorsInMap) {
                 if (a == null || a == hero) {
                     continue;
@@ -237,23 +354,17 @@ namespace TangledeepAccess.Gameplay {
                     continue;
                 }
 
-                if (Categorize(a) != cat) {
-                    continue;
+                ScanCategory cat = Categorize(a);
+                if (cat == ScanCategory.Other) {
+                    continue; // unclassified — never surfaced
                 }
 
-                string name = GameLabelReader.Clean(a.displayName);
-                if (string.IsNullOrEmpty(name)) {
-                    name = a.actorRefName; // e.g. stairs carry no displayName
-                }
-
-                int dx = x - (int)hp.x;
-                int dy = y - (int)hp.y;
                 list.Add(new ScanEntry {
                     ActorId = a.actorUniqueID,
-                    Name = name,
-                    Dx = dx,
-                    Dy = dy,
-                    Steps = GridDirection.Steps(dx, dy),
+                    Category = cat,
+                    X = x,
+                    Y = y,
+                    Manhattan = Mathf.Abs(x - hx) + Mathf.Abs(y - hy),
                 });
             }
 
@@ -263,27 +374,74 @@ namespace TangledeepAccess.Gameplay {
             // fold members into representative entries (keeping their ids) before the sort. The
             // navigation above is already entry-based, so only this step changes.
 
-            list.Sort((p, q) => p.Steps - q.Steps);
+            list.Sort(Compare);
             return list;
+        }
+
+        // Nearest first by Manhattan distance, ties broken by tile x then y (a stable total order).
+        private static int Compare(ScanEntry p, ScanEntry q) {
+            if (p.Manhattan != q.Manhattan) {
+                return p.Manhattan - q.Manhattan;
+            }
+            if (p.X != q.X) {
+                return p.X - q.X;
+            }
+
+            return p.Y - q.Y;
+        }
+
+        // The entries of a category: the whole snapshot for All, else a stable filtered copy.
+        private static List<ScanEntry> View(ScanCategory cat) {
+            if (cat == ScanCategory.All) {
+                return _snapshot;
+            }
+
+            var view = new List<ScanEntry>();
+            foreach (ScanEntry e in _snapshot) {
+                if (e.Category == cat) {
+                    view.Add(e);
+                }
+            }
+
+            return view;
         }
 
         // --- Speech ---
 
-        private static void SpeakCategory(MessageBuilder message, ScanCategory cat, List<ScanEntry> entries, int index) {
+        private static void SpeakCategory(MessageBuilder message, ScanCategory cat, List<ScanEntry> view, int index) {
             message.Fragment(Label(cat));
-            message.Fragment(entries.Count.ToString());
+            message.Fragment(view.Count.ToString());
             message.ListItem();
-            SpeakEntry(message, entries[index], index, entries.Count);
+            SpeakEntry(message, view[index], index, view.Count);
         }
 
+        // Resolve the entry's actor live (by id) for a current name and offset; a vanished actor reads
+        // "gone". The fraction (position in the list) always speaks.
         private static void SpeakEntry(MessageBuilder message, ScanEntry entry, int index, int count) {
-            message.Fragment(entry.Name);
-            message.PushRelativeCoordinates(new Vector2(entry.Dx, entry.Dy));
+            HeroPC hero = GameMasterScript.heroPCActor;
+            Map map = MapMasterScript.activeMap;
+            Actor a = map != null ? map.FindActorByID(entry.ActorId) : null;
+            if (a == null || hero == null) {
+                message.Fragment("gone");
+            } else {
+                string name = GameLabelReader.Clean(a.displayName);
+                if (string.IsNullOrEmpty(name)) {
+                    name = a.actorRefName; // e.g. stairs carry no displayName
+                }
+
+                Vector2 p = a.GetPos();
+                Vector2 hp = hero.GetPos();
+                message.Fragment(name);
+                message.PushRelativeCoordinates(new Vector2((int)p.x - (int)hp.x, (int)p.y - (int)hp.y));
+            }
+
             message.ListItem().PushFraction(index + 1, count);
         }
 
         private static string Label(ScanCategory cat) {
             switch (cat) {
+                case ScanCategory.All:
+                    return "All";
                 case ScanCategory.Monsters:
                     return "Monsters";
                 case ScanCategory.Items:

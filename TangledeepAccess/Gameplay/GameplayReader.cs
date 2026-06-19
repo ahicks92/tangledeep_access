@@ -81,12 +81,14 @@ namespace TangledeepAccess.Gameplay {
                     + "it to you. "
                     + "Backtick, cycle hotbar and read it. "
                     + "Page up and page down, step scanner entries; control plus page up or down, "
-                    + "step scanner categories. "
+                    + "step scanner categories, starting from all; Home points the cursor at the "
+                    + "selected one; End rescans. "
                     + "Navigation aids sit on F keys. F1 is wall echo: shift F1 toggles it on or off "
                     + "(on by default), control F1 fires it once. F2 is the entity scanner: control F2 "
                     + "toggles a continuous sweep of things in view, panned by side-to-side position "
                     + "and pitched by how far north or south. "
                     + "F8, F9, F10, lower music, sound, footsteps volume; hold shift to raise. "
+                    + "Control left or right bracket, scroll back or forward through the combat log. "
                     + "Apostrophe, repeat. Slash, this help.");
             }
 
@@ -101,6 +103,12 @@ namespace TangledeepAccess.Gameplay {
                     break;
                 case ModInputKind.ReadStatus:
                     ReadStatus(message, hero);
+                    break;
+                case ModInputKind.LogHistoryPrev:
+                    GameEventLog.AppendOlder(message);
+                    break;
+                case ModInputKind.LogHistoryNext:
+                    GameEventLog.AppendNewer(message);
                     break;
             }
 

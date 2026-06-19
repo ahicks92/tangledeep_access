@@ -94,6 +94,18 @@ namespace TangledeepAccess.Controls {
                 return ModInputAction.Of(ModInputKind.Help);
             }
 
+            // Combat-log history: Ctrl+[ steps to the older message, Ctrl+] to the newer. The game
+            // binds bare [ ] to cycle-weapons and never with a modifier, so the Ctrl combos shadow
+            // nothing; Ctrl is also the screen reader's stop key, which only silences the previous
+            // utterance before ours speaks — exactly what we want when stepping the log.
+            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            if (ctrl && Input.GetKeyDown(KeyCode.LeftBracket)) {
+                return ModInputAction.Of(ModInputKind.LogHistoryPrev);
+            }
+            if (ctrl && Input.GetKeyDown(KeyCode.RightBracket)) {
+                return ModInputAction.Of(ModInputKind.LogHistoryNext);
+            }
+
             return null;
         }
 
@@ -171,12 +183,21 @@ namespace TangledeepAccess.Controls {
         /// <summary>
         /// Scanner navigation, the scanner drainer's set — Factorio Access's Page Up/Down family:
         /// plain Page Up/Down step between entries (Factorio's subcategory axis), Ctrl + Page Up/Down
-        /// step between categories. Shift + Page Up/Down is Factorio's instance axis, which we have
-        /// not built yet, so we leave it unclaimed (pass through) for now rather than swallow it. The
-        /// game binds Page Up/Down only to in-list paging, which never applies in free play, so
-        /// claiming them shadows nothing here. Modeless: the scanner keeps its selection between presses.
+        /// step between categories. Home points the exploration cursor at the selected feature (its
+        /// readout follows); End rescans — re-snapshots the list. Shift + Page Up/Down is Factorio's
+        /// instance axis, which we have not built yet, so we leave it unclaimed (pass through) for now
+        /// rather than swallow it. The game binds Page Up/Down only to in-list paging and leaves
+        /// Home/End unbound, so claiming them shadows nothing in free play. Modeless: the scanner keeps
+        /// its selection between presses.
         /// </summary>
         public static ModInputAction? ScannerNav() {
+            if (Input.GetKeyDown(KeyCode.Home)) {
+                return ModInputAction.Of(ModInputKind.ScanGoto);
+            }
+            if (Input.GetKeyDown(KeyCode.End)) {
+                return ModInputAction.Of(ModInputKind.ScanRescan);
+            }
+
             bool up = Input.GetKeyDown(KeyCode.PageUp);
             bool down = Input.GetKeyDown(KeyCode.PageDown);
             if (!up && !down) {
