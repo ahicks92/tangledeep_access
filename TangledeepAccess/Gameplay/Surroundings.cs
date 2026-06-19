@@ -27,8 +27,8 @@ namespace TangledeepAccess.Gameplay {
             var seen = new HashSet<string>();
 
             foreach (Actor actor in MapMasterScript.activeMap.actorsInMap) {
-                if (actor == null || actor == hero) {
-                    continue;
+                if (actor == null || actor == hero || actor.destroyed) {
+                    continue; // an opened crate / slain monster lingers here until cleanup — skip it
                 }
 
                 Vector2 p = actor.GetPos();

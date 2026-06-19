@@ -279,7 +279,7 @@ namespace TangledeepAccess.Gameplay {
 
             ScanEntry entry = view[cur];
             Actor a = map.FindActorByID(entry.ActorId);
-            Vector2 target = a != null ? a.GetPos() : new Vector2(entry.X, entry.Y);
+            Vector2 target = IsLive(a) ? a.GetPos() : new Vector2(entry.X, entry.Y);
             return ExplorationCursor.JumpTo(target);
         }
 
@@ -338,8 +338,8 @@ namespace TangledeepAccess.Gameplay {
             int hx = (int)hp.x;
             int hy = (int)hp.y;
             foreach (Actor a in map.actorsInMap) {
-                if (a == null || a == hero) {
-                    continue;
+                if (a == null || a == hero || a.destroyed) {
+                    continue; // an opened crate / slain monster lingers in actorsInMap until cleanup
                 }
 
                 int x = (int)a.GetPos().x;
@@ -421,8 +421,8 @@ namespace TangledeepAccess.Gameplay {
             HeroPC hero = GameMasterScript.heroPCActor;
             Map map = MapMasterScript.activeMap;
             Actor a = map != null ? map.FindActorByID(entry.ActorId) : null;
-            if (a == null || hero == null) {
-                message.Fragment("gone");
+            if (!IsLive(a) || hero == null) {
+                message.Fragment("gone"); // resolved nothing, or it died/was opened since the scan
             } else {
                 string name = GameLabelReader.Clean(a.displayName);
                 if (string.IsNullOrEmpty(name)) {
@@ -458,6 +458,12 @@ namespace TangledeepAccess.Gameplay {
         }
 
         // --- Helpers ---
+
+        // A still-present actor: resolved and not destroyed. A destroyed actor (opened crate, slain
+        // monster) lingers in actorsInMap until cleanup, so id resolution alone is not enough.
+        private static bool IsLive(Actor a) {
+            return a != null && !a.destroyed;
+        }
 
         private static int IndexOf(ScanCategory cat) {
             for (int i = 0; i < Order.Length; i++) {
