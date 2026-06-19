@@ -2,33 +2,42 @@ using UnityEngine;
 
 namespace TangledeepAccess.Audio {
     /// <summary>
-    /// Plays a mod-synthesized interleaved-stereo PCM buffer through a single mod-owned
-    /// <see cref="AudioSource"/>, bypassing the game's mixer and all DSP so the buffer reaches the
-    /// output sample-for-sample (the "no effects" path: 2D, centered, mixer-group-less, with the
-    /// effect/listener/reverb bypasses on). The buffer must be rendered at the same sample rate the
-    /// clip is created with, so the caller passes the rate it used. Engine-side glue (touches Unity),
-    /// so it lives outside Core; the buffer math lives in Core.
+    /// Plays mod-synthesized interleaved-stereo PCM through mod-owned <see cref="AudioSource"/>s,
+    /// bypassing the game's mixer and all DSP so the buffer reaches the output sample-for-sample (2D,
+    /// centered, no mixer group, effect/listener/reverb bypasses on). A small round-robin pool of
+    /// voices means a new ping does not cut off the previous one — successive cues (the scanner's
+    /// sweep) overlap naturally. The caller passes the rate it rendered at, since the clip is created
+    /// to match. Engine-side glue (touches Unity); the buffer math lives in Core.
     /// </summary>
     public static class TonePlayer {
-        private static AudioSource _source;
+        private const int Voices = 8;
+        private static AudioSource[] _voices;
+        private static int _next;
 
-        private static AudioSource Source() {
-            if (_source == null) {
+        private static AudioSource[] Pool() {
+            if (_voices == null) {
                 var go = new GameObject("TangledeepAccess.TonePlayer");
                 Object.DontDestroyOnLoad(go);
-                _source = go.AddComponent<AudioSource>();
-                _source.playOnAwake = false;
-                _source.loop = false;
-                _source.spatialBlend = 0f;          // 2D: no distance attenuation / 3D panning
-                _source.panStereo = 0f;             // leave the buffer's own L/R intact
-                _source.pitch = 1f;                 // no resample-by-pitch
-                _source.volume = 1f;
-                _source.outputAudioMixerGroup = null; // straight to the listener, not the game mixer
-                _source.bypassEffects = true;
-                _source.bypassListenerEffects = true;
-                _source.bypassReverbZones = true;
+                _voices = new AudioSource[Voices];
+                for (int i = 0; i < Voices; i++) {
+                    _voices[i] = Configure(go.AddComponent<AudioSource>());
+                }
             }
-            return _source;
+            return _voices;
+        }
+
+        private static AudioSource Configure(AudioSource source) {
+            source.playOnAwake = false;
+            source.loop = false;
+            source.spatialBlend = 0f;          // 2D: no distance attenuation / 3D panning
+            source.panStereo = 0f;             // leave the buffer's own L/R intact
+            source.pitch = 1f;                 // no resample-by-pitch
+            source.volume = 1f;
+            source.outputAudioMixerGroup = null; // straight to the listener, not the game mixer
+            source.bypassEffects = true;
+            source.bypassListenerEffects = true;
+            source.bypassReverbZones = true;
+            return source;
         }
 
         /// <summary>Play an interleaved stereo buffer (L, R, L, R, …) rendered at <paramref name="sampleRate"/> Hz.</summary>
@@ -37,12 +46,14 @@ namespace TangledeepAccess.Audio {
                 return;
             }
 
-            AudioSource source = Source();
-            var clip = AudioClip.Create("wallEcho", pcm.Length / 2, 2, sampleRate, false);
+            AudioSource voice = Pool()[_next];
+            _next = (_next + 1) % Voices;
+
+            var clip = AudioClip.Create("tone", pcm.Length / 2, 2, sampleRate, false);
             clip.SetData(pcm, 0);
-            source.Stop();
-            source.clip = clip;
-            source.Play();
+            voice.Stop();
+            voice.clip = clip;
+            voice.Play();
         }
     }
 }

@@ -40,13 +40,14 @@ namespace TangledeepAccess.Gameplay {
                 return;
             }
 
-            // Navigation aids. Toggle speaks its on/off confirmation; trigger is a pure-audio fire.
+            // Navigation aids. Shift+Fn and Ctrl+Fn each route to the aid's own hook, which decides
+            // what to do (toggle, fire once, …) and returns any line to speak.
             if (action.Kind == ModInputKind.NavAidToggle) {
-                speech.Speak(NavAids.Toggle(action.Dx));
+                speech.Speak(NavAids.OnShiftKey(action.Dx));
                 return;
             }
             if (action.Kind == ModInputKind.NavAidTrigger) {
-                NavAids.FireNow(action.Dx);
+                speech.Speak(NavAids.OnCtrlKey(action.Dx));
                 return;
             }
 
@@ -80,9 +81,10 @@ namespace TangledeepAccess.Gameplay {
                     + "then arrows or numpad to move it, brackets to jump between things in view, "
                     + "Home to recenter. Page up and page down, step scanner entries; control plus "
                     + "page up or down, step scanner categories. "
-                    + "Navigation aids sit on F keys: shift plus an F key toggles an aid on or off, "
-                    + "control plus that F key fires it once without moving. F1 is wall echo, panned "
-                    + "tones for the nearest wall in each direction, on by default. "
+                    + "Navigation aids sit on F keys. F1 is wall echo: shift F1 toggles it on or off "
+                    + "(on by default), control F1 fires it once. F2 is the entity scanner: control F2 "
+                    + "toggles a continuous sweep of things in view, panned by side-to-side position "
+                    + "and pitched by how far north or south. "
                     + "F8, F9, F10, lower music, sound, footsteps volume; hold shift to raise. "
                     + "Apostrophe, repeat. Slash, this help.");
             }

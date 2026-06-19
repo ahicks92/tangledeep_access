@@ -1,63 +1,86 @@
-using System;
 using TangledeepAccess.Speech;
 using UnityEngine;
 
 namespace TangledeepAccess.Gameplay {
-    /// <summary>One registered navigation aid: a named audio cue with an on/off toggle and a fire action.</summary>
-    internal sealed class NavAid {
+    /// <summary>
+    /// One navigation aid on an F-key slot. The base defines four optional hooks so each aid picks
+    /// its own control scheme: <see cref="OnShift"/> (Shift+Fn) and <see cref="OnCtrl"/> (Ctrl+Fn)
+    /// return a line to speak (or null); <see cref="OnMove"/> fires on each hero step; <see cref="Tick"/>
+    /// runs every frame. <see cref="ToggleSpoken"/> is the common "flip Enabled and announce it" helper.
+    /// </summary>
+    internal abstract class NavAid {
         public string Name { get; }
         public bool Enabled;
-        private readonly Action _fire;
 
-        public NavAid(string name, bool defaultEnabled, Action fire) {
+        protected NavAid(string name, bool enabled) {
             Name = name;
-            Enabled = defaultEnabled;
-            _fire = fire;
+            Enabled = enabled;
         }
 
-        public void Fire() {
-            _fire();
+        public virtual MessageBuilder OnShift() => null;
+        public virtual MessageBuilder OnCtrl() => null;
+        public virtual void OnMove() { }
+        public virtual void Tick(double dt) { }
+
+        protected MessageBuilder ToggleSpoken() {
+            Enabled = !Enabled;
+            return new MessageBuilder().Fragment(Name).Fragment(Enabled ? "on" : "off");
         }
     }
 
     /// <summary>
-    /// The navigation-aid framework. A small registry of audio aids, each on an F-key slot (F1 =
-    /// index 0, F2 = 1, …). Shift+Fn toggles an aid on or off (spoken, since there is no visual);
-    /// Ctrl+Fn fires it once without moving. Enabled aids also auto-fire on each hero step — the
-    /// hero-tile edge detection lives here, once for all aids (mirrors <see cref="MovementWatcher"/>).
-    /// Adding an aid is one entry in <see cref="Aids"/>.
+    /// Wall echo (F1): Shift+F1 toggles auto-on-move (on by default), Ctrl+F1 fires it once. Fires on
+    /// each step while enabled.
+    /// </summary>
+    internal sealed class WallEchoAid : NavAid {
+        public WallEchoAid() : base("wall echo", enabled: true) { }
+
+        public override MessageBuilder OnShift() => ToggleSpoken();
+
+        public override MessageBuilder OnCtrl() {
+            WallEcho.Play();
+            return null;
+        }
+
+        public override void OnMove() {
+            if (Enabled) {
+                WallEcho.Play();
+            }
+        }
+    }
+
+    /// <summary>
+    /// The navigation-aid framework. A registry of aids, each on an F-key slot (F1 = index 0, …).
+    /// Shift+Fn routes to the aid's <see cref="NavAid.OnShift"/>, Ctrl+Fn to <see cref="NavAid.OnCtrl"/>;
+    /// both speak whatever the hook returns. <see cref="PollOnMove"/> edge-detects the hero tile once
+    /// for all aids and calls their <see cref="NavAid.OnMove"/>; <see cref="Tick"/> drives the
+    /// continuous aids every frame. Adding an aid is one entry in <see cref="Aids"/>.
     /// </summary>
     internal static class NavAids {
         private static readonly NavAid[] Aids = {
-            new NavAid("wall echo", defaultEnabled: true, WallEcho.Play), // F1
+            new WallEchoAid(),  // F1
+            new ScannerAid(),   // F2
         };
 
-        // Last hero tile, shared across all aids for the on-move trigger.
+        // Last hero tile, shared across all aids for the on-move hook.
         private static bool _have;
         private static int _lastX;
         private static int _lastY;
 
-        /// <summary>Flip an aid on/off; returns the spoken confirmation (or null for a bad index).</summary>
-        public static MessageBuilder Toggle(int index) {
-            if (index < 0 || index >= Aids.Length) {
-                return null;
-            }
-
-            NavAid aid = Aids[index];
-            aid.Enabled = !aid.Enabled;
-            return new MessageBuilder().Fragment(aid.Name).Fragment(aid.Enabled ? "on" : "off");
+        public static MessageBuilder OnShiftKey(int index) {
+            return (index >= 0 && index < Aids.Length) ? Aids[index].OnShift() : null;
         }
 
-        /// <summary>Fire an aid once on demand, regardless of its toggle state.</summary>
-        public static void FireNow(int index) {
-            if (index < 0 || index >= Aids.Length) {
-                return;
-            }
-
-            Aids[index].Fire();
+        public static MessageBuilder OnCtrlKey(int index) {
+            return (index >= 0 && index < Aids.Length) ? Aids[index].OnCtrl() : null;
         }
 
-        /// <summary>Fire every enabled aid when the hero's tile changes. Polled once per frame.</summary>
+        public static void Tick(double dt) {
+            foreach (NavAid aid in Aids) {
+                aid.Tick(dt);
+            }
+        }
+
         public static void PollOnMove() {
             HeroPC hero = GameMasterScript.heroPCActor;
             if (hero == null || !GameMasterScript.actualGameStarted || MapMasterScript.activeMap == null) {
@@ -81,9 +104,7 @@ namespace TangledeepAccess.Gameplay {
             }
 
             foreach (NavAid aid in Aids) {
-                if (aid.Enabled) {
-                    aid.Fire();
-                }
+                aid.OnMove();
             }
         }
     }

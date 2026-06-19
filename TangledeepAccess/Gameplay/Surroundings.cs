@@ -9,6 +9,7 @@ namespace TangledeepAccess.Gameplay {
         public Vector2 Pos;
         public bool Hostile;
         public int Steps; // king-move distance from the hero
+        public object Handle; // the underlying Actor/Item, for stable reference identity (scanner)
     }
 
     /// <summary>
@@ -37,7 +38,7 @@ namespace TangledeepAccess.Gameplay {
 
                 string name = GameLabelReader.Clean(actor.displayName);
                 if (name != null && seen.Add(Key(name, p))) {
-                    found.Add(Make(name, actor.actorfaction == Faction.ENEMY, hp, p));
+                    found.Add(Make(name, actor.actorfaction == Faction.ENEMY, hp, p, actor));
                 }
             }
 
@@ -58,7 +59,7 @@ namespace TangledeepAccess.Gameplay {
                     foreach (Item item in items) {
                         string name = GameLabelReader.Clean(item.GetNameForUI());
                         if (name != null && seen.Add(Key(name, at))) {
-                            found.Add(Make("item: " + name, false, hp, at));
+                            found.Add(Make("item: " + name, false, hp, at, item));
                         }
                     }
                 }
@@ -76,7 +77,7 @@ namespace TangledeepAccess.Gameplay {
             return visible != null && visible[(int)p.x, (int)p.y];
         }
 
-        private static Poi Make(string name, bool hostile, Vector2 from, Vector2 to) {
+        private static Poi Make(string name, bool hostile, Vector2 from, Vector2 to, object handle) {
             int dx = (int)to.x - (int)from.x;
             int dy = (int)to.y - (int)from.y;
             return new Poi {
@@ -84,6 +85,7 @@ namespace TangledeepAccess.Gameplay {
                 Pos = to,
                 Hostile = hostile,
                 Steps = GridDirection.Steps(dx, dy),
+                Handle = handle,
             };
         }
 

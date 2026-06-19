@@ -141,10 +141,11 @@ namespace TangledeepAccess {
             // Queued, not interrupting, so it follows the turn's log lines.
             _speech?.Speak(MovementWatcher.PollOnMove(), interrupt: false);
 
-            // Navigation aids (e.g. wall echo): every enabled aid auto-fires on each hero step — the
-            // game's own footstep is the lead-in to judge their latency against. Pure audio through
-            // their own AudioSource, independent of speech. Toggle/trigger on Shift/Ctrl + F keys.
+            // Navigation aids. Per-step aids (wall echo) fire on each hero tile change; continuous
+            // aids (the entity scanner) advance on their own clock via Tick. Pure audio through their
+            // own AudioSources, independent of speech. Toggle/trigger on Shift/Ctrl + F keys.
             NavAids.PollOnMove();
+            NavAids.Tick(UnityEngine.Time.deltaTime);
 
             // Low/critical health warning. Interrupts — survival in a permadeath game trumps
             // whatever else is queued.
