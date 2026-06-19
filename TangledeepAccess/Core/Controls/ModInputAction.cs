@@ -28,6 +28,10 @@ namespace TangledeepAccess.Controls {
         /// <summary>Toggle the focused control's "trash" mark (menus). A toggle, like MarkFavorite.</summary>
         MarkTrash,
 
+        /// <summary>Assign the focused control to a hotbar slot (menus). Dx carries the slot, 1-8.
+        /// The skill sheet binds its active abilities this way; overlays with no handler re-read.</summary>
+        AssignHotbar,
+
         /// <summary>The game's UI focus changed — a non-keyboard event source, not a key press. A
         /// payload-free ping: the new focus lives in the focus watcher's published current value,
         /// read by the realizer when this fires. Emitted once per focus edge, stale→none included.</summary>

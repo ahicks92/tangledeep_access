@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using TangledeepAccess.Focus;
+using TangledeepAccess.Gameplay;
 using TangledeepAccess.Speech;
 using TangledeepAccess.Ui;
 using TangledeepAccess.Ui.Graph;
@@ -14,22 +15,23 @@ namespace TangledeepAccess.Overlays {
     /// JP) and <b>Slot</b> (assign learned actives to the hotbar, equip passives). We re-present it
     /// as one owned grid, built fresh every tick.
     ///
-    /// <para><b>Scope (staged):</b> this first cut narrates <b>Learn mode</b> fully — the buyable
-    /// job-ability list (read each ability's status, confirm to learn/master, read-info for the full
-    /// tooltip) and the innate job-bonus text. The mode toggle is always present, so the player can
-    /// switch the game between modes; <b>Slot mode</b> is not narrated yet and renders a spoken
-    /// notice instead of silently doing nothing. Hotbar review/binding will be a separate overlay.</para>
-    ///
-    /// <para><b>Data source:</b> the job's own <c>JobAbilities</c> (filtered exactly as the game's
-    /// <c>FillJobAbilitiesList</c> does — drop innates and post-mastery skills until the job is
-    /// mastered). Read live each build; never cached.</para>
-    ///
-    /// <para><b>Navigation (a 2-D grid):</b> a header row (status anchor + the two mode buttons),
+    /// <para><b>Learn mode</b> (a 2-D grid): a header row (status anchor + the two mode buttons),
     /// then an <b>innate</b> row (a summary cell that reads the whole bonus text, then one cell per
     /// passive tier — tier 2/3 announce "locked" until their JP / mastery gate is met), then a
-    /// <b>learn</b> row (a label cell, then one cell per buyable ability). Each row's first cell names
-    /// the row; left/right walks its contents, up/down moves between rows. Rows do not share keys, so
-    /// up/down always lands on the row's first cell.</para>
+    /// <b>learn</b> row (a label cell, then one cell per buyable ability — confirm learns/masters,
+    /// read-info reads the tooltip).</para>
+    ///
+    /// <para><b>Slot mode</b>: an <b>equipped passives</b> row (confirm to unequip), an <b>equippable
+    /// passives</b> row (the slot-using passives, with the "N of 4" budget; confirm equips/unequips),
+    /// an <b>always-on passives</b> row (confirm toggles), then one row per job the hero knows an
+    /// active ability from (confirm <i>uses</i> the ability, number keys 1-8 <i>assign</i> it to that
+    /// hotbar slot on the active page — backtick cycles the page, even from here), and a <b>show
+    /// unlearned</b> toggle that adds every job's unlearned abilities (suffixed "unlearned") so the
+    /// player can browse the whole tree. Changing skills is gated to safe areas, mirroring the game.</para>
+    ///
+    /// <para><b>Data source:</b> the hero's own learned abilities for what they have, and
+    /// <c>masterJobList</c> for the unlearned tree. Read live each build; never cached. Each row's
+    /// first cell names the row; left/right walks its contents, up/down moves between rows.</para>
     /// </summary>
     internal sealed class SkillSheetOverlay : IUiOverlay {
         // The screen's current mode; private on the screen type.
@@ -40,6 +42,10 @@ namespace TangledeepAccess.Overlays {
         // with live lock states). Private; reflected so we speak the game's exact string.
         private static readonly MethodInfo InnateText =
             AccessTools.Method(typeof(Switch_UISkillSheet), "GetStringForJobInnateBonuses");
+
+        // Slot-mode view toggle (a UI preference, not game state): also list the abilities the hero
+        // has not learned yet, so the player can browse the whole tree. Persists across rebuilds.
+        private static bool _showUnlearned;
 
         public OverlayId Id => OverlayId.Skills;
 
@@ -74,12 +80,7 @@ namespace TangledeepAccess.Overlays {
             if (SheetMode(screen) == ESkillSheetMode.purchase_abilities) {
                 BuildLearnBody(builder, screen);
             } else {
-                builder.AddLabel(
-                    ControlId.Structural("skill:slotstub"),
-                    ctx => ctx.Message
-                        .Fragment(ModStrings.SlotUnsupportedHead)
-                        .ListItem(ModStrings.SlotUnsupportedHint)
-                );
+                BuildSlotBody(builder);
             }
         }
 
@@ -304,6 +305,372 @@ namespace TangledeepAccess.Overlays {
         private static void ReadInnate(OverlayCtx ctx, Switch_UISkillSheet screen) {
             string raw = (string)InnateText.Invoke(screen, null);
             ctx.Message.Fragment(GameLabelReader.Clean(raw));
+        }
+
+        // --- Slot-mode body --------------------------------------------------------------------
+
+        private static void BuildSlotBody(IOverlayBuilder builder) {
+            HeroPC hero = GameMasterScript.heroPCActor;
+
+            BuildEquippedRow(builder, hero);
+            BuildPassiveRow(builder, "equippable", ModStrings.EquippablePassivesRow, slotUsing: true, hero);
+            BuildPassiveRow(builder, "alwayson", ModStrings.AlwaysOnPassivesRow, slotUsing: false, hero);
+            BuildActiveJobRows(builder, hero);
+
+            builder.AddClickable(
+                ControlId.Structural("skill:showunlearned"),
+                ctx => ctx.Message.Fragment(ModStrings.ShowUnlearned(_showUnlearned)),
+                (ctx, mods) => {
+                    _showUnlearned = !_showUnlearned;
+                    ctx.Message.Fragment(ModStrings.ShowUnlearned(_showUnlearned));
+                }
+            );
+        }
+
+        // The hero's currently-equipped passives, for a quick loadout read; confirm unequips. Always
+        // the learned set (you cannot equip what you have not learned), so unaffected by show-unlearned.
+        private static void BuildEquippedRow(IOverlayBuilder builder, HeroPC hero) {
+            builder.StartRow("equipped");
+
+            int count = 0;
+            builder.AddLabel(
+                ControlId.Structural("skill:equipped"),
+                ctx => {
+                    ctx.Message.Fragment(ModStrings.EquippedRow);
+                    if (count == 0) {
+                        ctx.Message.Fragment(ModStrings.None);
+                    }
+                }
+            );
+
+            foreach (AbilityScript a in hero.myAbilities.abilities) {
+                if (!a.displayInList || !a.passiveAbility || !a.passiveEquipped) {
+                    continue;
+                }
+
+                count++;
+                AbilityScript ability = a;
+                builder.AddItem(
+                    ControlId.Structural("skill:eq:" + ability.refName),
+                    new NodeVtable {
+                        Label = ctx => {
+                            ctx.Message.Fragment(GameLabelReader.Clean(ability.GetNameForUI()));
+                            if (!ability.UsePassiveSlot) {
+                                ctx.Message.Fragment(ModStrings.AlwaysOn);
+                            }
+                        },
+                        OnClick = (ctx, mods) => Unequip(ctx, ability),
+                        OnReadInfo = ctx =>
+                            ctx.Message.Fragment(GameLabelReader.Clean(ability.GetInformationForTooltip())),
+                    }
+                );
+            }
+
+            builder.EndRow();
+        }
+
+        // One passive catalog row (slot-using or always-on), confirm toggles equip. With the show-
+        // unlearned view on it also lists every job's matching passive the hero lacks (suffixed
+        // "unlearned", confirm just points at the Learn tab).
+        private static void BuildPassiveRow(
+            IOverlayBuilder builder,
+            string key,
+            string rowLabel,
+            bool slotUsing,
+            HeroPC hero
+        ) {
+            List<AbilityScript> passives = GatherPassives(hero, slotUsing);
+
+            builder.StartRow("passrow:" + key);
+            builder.AddLabel(
+                ControlId.Structural("skill:passrow:" + key),
+                ctx => {
+                    ctx.Message.Fragment(rowLabel);
+                    if (slotUsing) {
+                        ctx.Message.ListItem(ModStrings.PassiveSlotsUsed(hero.NumberOfPassiveSlotsTaken()));
+                    }
+
+                    if (passives.Count == 0) {
+                        ctx.Message.Fragment(ModStrings.None);
+                    }
+                }
+            );
+
+            foreach (AbilityScript a in passives) {
+                AbilityScript ability = a;
+                bool learned = hero.myAbilities.HasAbility(ability);
+                builder.AddItem(
+                    ControlId.Structural("skill:passive:" + key + ":" + ability.refName),
+                    new NodeVtable {
+                        Label = ctx => PassiveLabel(ctx.Message, ability, learned),
+                        OnClick = (ctx, mods) => TogglePassive(ctx, ability, learned),
+                        OnReadInfo = ctx =>
+                            ctx.Message.Fragment(GameLabelReader.Clean(ability.GetInformationForTooltip())),
+                    }
+                );
+            }
+
+            builder.EndRow();
+        }
+
+        // One row per job the hero knows an active ability from (or, with show-unlearned, per job that
+        // has any active). Confirm uses the ability; number keys 1-8 assign it to that hotbar slot.
+        private static void BuildActiveJobRows(IOverlayBuilder builder, HeroPC hero) {
+            var byJob = new Dictionary<CharacterJobs, List<AbilityScript>>();
+            var seen = new HashSet<string>();
+
+            foreach (AbilityScript a in hero.myAbilities.abilities) {
+                if (a.displayInList && !a.passiveAbility && seen.Add(a.refName)) {
+                    AddToJob(byJob, a.jobLearnedFrom, a);
+                }
+            }
+
+            if (_showUnlearned) {
+                foreach (CharacterJobData job in GameMasterScript.masterJobList) {
+                    foreach (JobAbility ja in job.JobAbilities) {
+                        AbilityScript a = ja.ability;
+                        if (a == null || ja.innate || a.passiveAbility || hero.myAbilities.HasAbility(a)) {
+                            continue;
+                        }
+
+                        if (seen.Add(a.refName)) {
+                            AddToJob(byJob, job.jobEnum, a);
+                        }
+                    }
+                }
+            }
+
+            // Emit in master-job order so the rows have a stable, familiar sequence.
+            foreach (CharacterJobData job in GameMasterScript.masterJobList) {
+                if (!byJob.TryGetValue(job.jobEnum, out List<AbilityScript> actives) || actives.Count == 0) {
+                    continue;
+                }
+
+                BuildJobRow(builder, job, actives, hero);
+            }
+        }
+
+        private static void BuildJobRow(
+            IOverlayBuilder builder,
+            CharacterJobData job,
+            List<AbilityScript> actives,
+            HeroPC hero
+        ) {
+            builder.StartRow("job:" + job.jobEnum);
+            builder.AddLabel(
+                ControlId.Structural("skill:jobrow:" + job.jobEnum),
+                ctx => ctx.Message.Fragment(ModStrings.JobAbilitiesRow(GameLabelReader.Clean(job.DisplayName)))
+            );
+
+            foreach (AbilityScript a in actives) {
+                AbilityScript ability = a;
+                bool learned = hero.myAbilities.HasAbility(ability);
+                builder.AddItem(
+                    ControlId.Structural("skill:active:" + ability.refName),
+                    new NodeVtable {
+                        Label = ctx => ActiveLabel(ctx.Message, ability, learned),
+                        // Confirm uses the ability (gated like the game); read-info reads the tooltip;
+                        // number keys 1-8 bind it to that slot on the active hotbar page.
+                        OnClick = (ctx, mods) => UseAbility(ctx, ability, learned),
+                        OnReadInfo = ctx =>
+                            ctx.Message.Fragment(GameLabelReader.Clean(ability.GetInformationForTooltip())),
+                        OnAssignHotbar = ctx => AssignAbility(ctx, ability, learned),
+                    }
+                );
+            }
+
+            builder.EndRow();
+        }
+
+        // --- Slot-mode labels ------------------------------------------------------------------
+
+        private static void PassiveLabel(MessageBuilder message, AbilityScript a, bool learned) {
+            message.Fragment(GameLabelReader.Clean(a.GetNameForUI()));
+            if (!learned) {
+                message.Fragment(ModStrings.Unlearned);
+                return;
+            }
+
+            if (a.passiveEquipped) {
+                message.Fragment(ModStrings.Equipped);
+            }
+        }
+
+        private static void ActiveLabel(MessageBuilder message, AbilityScript a, bool learned) {
+            message.Fragment(GameLabelReader.Clean(a.GetNameForUI()));
+            if (!learned) {
+                message.Fragment(ModStrings.Unlearned);
+                return;
+            }
+
+            string binding = Hotbar.FindBinding(a);
+            if (binding != null) {
+                message.ListItem(binding);
+            }
+
+            if (a.toggled) {
+                message.ListItem(ModStrings.ToggledOn);
+            }
+        }
+
+        // --- Slot-mode actions -----------------------------------------------------------------
+
+        private static void TogglePassive(OverlayCtx ctx, AbilityScript a, bool learned) {
+            if (!learned) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment(ModStrings.LearnInLearnTab);
+                return;
+            }
+
+            if (!CanAlterSkills()) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment(ModStrings.CantChangeHere);
+                return;
+            }
+
+            HeroPC hero = GameMasterScript.heroPCActor;
+            if (a.passiveEquipped) {
+                hero.myAbilities.UnequipPassiveAbility(a);
+                UIManagerScript.PlayCursorSound("UITock");
+                ctx.Message.Fragment(GameLabelReader.Clean(a.GetNameForUI())).Fragment(ModStrings.Unequipped);
+                return;
+            }
+
+            // A slot-using passive needs a free slot; always-on passives never do.
+            if (a.UsePassiveSlot && hero.NumberOfPassiveSlotsTaken() >= 4) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment(ModStrings.NoFreePassiveSlots);
+                return;
+            }
+
+            hero.myAbilities.EquipPassiveAbility(a);
+            UIManagerScript.PlayCursorSound("UITick");
+            ctx.Message.Fragment(GameLabelReader.Clean(a.GetNameForUI())).Fragment(ModStrings.Equipped);
+        }
+
+        private static void Unequip(OverlayCtx ctx, AbilityScript a) {
+            if (!CanAlterSkills()) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment(ModStrings.CantChangeHere);
+                return;
+            }
+
+            GameMasterScript.heroPCActor.myAbilities.UnequipPassiveAbility(a);
+            UIManagerScript.PlayCursorSound("UITock");
+            ctx.Message.Fragment(GameLabelReader.Clean(a.GetNameForUI())).Fragment(ModStrings.Unequipped);
+        }
+
+        // Enter uses the ability — closing the sheet and casting through the game (into targeting for
+        // a targeted ability). Mirrors the game's gate: using from the sheet is only allowed when the
+        // player may use abilities outside the hotbar (an option / random-job mode); otherwise you
+        // must put it on the bar and fire it there.
+        private static void UseAbility(OverlayCtx ctx, AbilityScript a, bool learned) {
+            if (!learned) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment(ModStrings.LearnInLearnTab);
+                return;
+            }
+
+            if (
+                !GameModifiersScript.CanUseAbilitiesOutsideOfHotbar()
+                && !RandomJobMode.IsCurrentGameInRandomJobMode()
+            ) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment(ModStrings.CantUseFromHere);
+                return;
+            }
+
+            UIManagerScript.ForceCloseFullScreenUI();
+            GameMasterScript.gmsSingleton.CheckAndTryAbility(a);
+        }
+
+        private static void AssignAbility(OverlayCtx ctx, AbilityScript a, bool learned) {
+            int slot = ctx.Arg;
+            if (slot < 1 || slot > Hotbar.PageSize) {
+                return;
+            }
+
+            if (!learned) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment(ModStrings.LearnInLearnTab);
+                return;
+            }
+
+            if (!CanAlterSkills()) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment(ModStrings.CantChangeHere);
+                return;
+            }
+
+            Hotbar.Assign(a, slot);
+            UIManagerScript.PlayCursorSound("UITick");
+            ctx.Message
+                .Fragment(GameLabelReader.Clean(a.GetNameForUI()))
+                .Fragment(ModStrings.Assigned)
+                .Fragment(ModStrings.OnHotbar(Hotbar.ActivePage + 1, slot));
+        }
+
+        // --- Slot-mode helpers -----------------------------------------------------------------
+
+        // The hero's learned passives of one kind (slot-using or always-on), plus — when browsing
+        // unlearned — every job's matching passive the hero lacks. Deduped by refName.
+        private static List<AbilityScript> GatherPassives(HeroPC hero, bool slotUsing) {
+            var seen = new HashSet<string>();
+            var result = new List<AbilityScript>();
+
+            foreach (AbilityScript a in hero.myAbilities.abilities) {
+                if (a.displayInList && a.passiveAbility && a.UsePassiveSlot == slotUsing && seen.Add(a.refName)) {
+                    result.Add(a);
+                }
+            }
+
+            if (_showUnlearned) {
+                foreach (CharacterJobData job in GameMasterScript.masterJobList) {
+                    foreach (JobAbility ja in job.JobAbilities) {
+                        AbilityScript a = ja.ability;
+                        if (
+                            a == null
+                            || ja.innate
+                            || !a.passiveAbility
+                            || a.UsePassiveSlot != slotUsing
+                            || hero.myAbilities.HasAbility(a)
+                        ) {
+                            continue;
+                        }
+
+                        if (seen.Add(a.refName)) {
+                            result.Add(a);
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private static void AddToJob(
+            Dictionary<CharacterJobs, List<AbilityScript>> byJob,
+            CharacterJobs job,
+            AbilityScript ability
+        ) {
+            if (!byJob.TryGetValue(job, out List<AbilityScript> list)) {
+                list = new List<AbilityScript>();
+                byJob[job] = list;
+            }
+
+            list.Add(ability);
+        }
+
+        // Whether the game permits changing slots/equips right now: only in towns / safe areas (or
+        // when a modifier lifts the restriction). Mirrors the skill sheet's own gate.
+        private static bool CanAlterSkills() {
+            if (GameModifiersScript.CanUseAbilitiesOutsideOfHotbar()
+                || RandomJobMode.IsCurrentGameInRandomJobMode()) {
+                return true;
+            }
+
+            Map map = MapMasterScript.activeMap;
+            return map != null && (map.IsTownMap() || map.dungeonLevelData.safeArea);
         }
     }
 }

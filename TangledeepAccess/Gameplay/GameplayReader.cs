@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using HarmonyLib;
 using TangledeepAccess.Controls;
 using TangledeepAccess.Focus;
 using TangledeepAccess.Speech;
@@ -104,75 +103,9 @@ namespace TangledeepAccess.Gameplay {
                 case ModInputKind.ReadStatus:
                     ReadStatus(message, hero);
                     break;
-                case ModInputKind.ReadHotbar:
-                    ReadHotbar(message);
-                    break;
-                case ModInputKind.CycleHotbar:
-                    CycleHotbar(message);
-                    break;
             }
 
             return message;
-        }
-
-        // --- Hotbar ---
-
-        // The active hotbar page index is a private static on UIManagerScript; slots are
-        // page*8 + 0..7 into the flat hotbarAbilities array. Two pages of 8.
-        private static readonly AccessTools.FieldRef<int> ActiveHotbarPage =
-            AccessTools.StaticFieldRefAccess<int>(AccessTools.Field(typeof(UIManagerScript), "indexOfActiveHotbar"));
-
-        // Replace the game's Ctrl "Cycle Hotbars" (freed for the screen reader): flip to the next
-        // page via the game's own state-mutator — keeping ability-firing correct — then read it out.
-        private static void CycleHotbar(MessageBuilder message) {
-            UIManagerScript.ToggleSecondaryHotbar();
-            ReadHotbar(message);
-        }
-
-        private static void ReadHotbar(MessageBuilder message) {
-            HotbarBindable[] hb = UIManagerScript.hotbarAbilities;
-            message.Fragment(ModStrings.Hotbar);
-            if (hb == null) {
-                message.Fragment(ModStrings.HotbarUnavailable);
-                return;
-            }
-
-            int page = ActiveHotbarPage();
-            message.Fragment((page + 1).ToString());
-
-            bool any = false;
-            for (int i = 0; i < 8; i++) {
-                int idx = page * 8 + i;
-                if (idx >= hb.Length) {
-                    break;
-                }
-
-                string name = HotbarSlotName(hb[idx]);
-                if (name != null) {
-                    message.ListItem((i + 1) + ", " + name);
-                    any = true;
-                }
-            }
-
-            if (!any) {
-                message.Fragment(ModStrings.HotbarEmpty);
-            }
-        }
-
-        private static string HotbarSlotName(HotbarBindable slot) {
-            if (slot == null) {
-                return null;
-            }
-
-            if (slot.actionType == HotbarBindableActions.ABILITY && slot.ability != null) {
-                return GameLabelReader.Clean(slot.ability.GetNameForUI());
-            }
-
-            if (slot.actionType == HotbarBindableActions.CONSUMABLE && slot.consume != null) {
-                return GameLabelReader.Clean(slot.consume.GetNameForUI());
-            }
-
-            return null;
         }
 
         // --- Status ---

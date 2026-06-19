@@ -16,7 +16,9 @@ namespace TangledeepAccess.Controls {
         // mid-look still takes keys); the look cursor wins over free play (it owns its movement keys
         // while active); the scanner is modeless and claims only its own dedicated nav keys, so its
         // position relative to look/gameplay does not matter; free play is the floor (it claims only
-        // our query hotkeys, passing movement to the game).
+        // our query hotkeys, passing movement to the game). The hotbar drainer sits ABOVE this whole
+        // list (handled in RouteInGame before the capture check), since its keys must survive even
+        // an overlay that owns input.
         private static readonly InputDrainer[] InGame = {
             MenuInputDrainer.Instance,
             LookInputDrainer.Instance,
@@ -26,6 +28,13 @@ namespace TangledeepAccess.Controls {
 
         /// <summary>In-game pump: offer ui, then the look cursor, then free play.</summary>
         public static bool RouteInGame() {
+            // Top priority, always: the hotbar keys (cycle/read) work even while a full-screen overlay
+            // owns input — so the player can flip to the page they want before assigning a skill in
+            // the slot sheet. Offered before the capture check; claims only its own two keys.
+            if (HotbarInputDrainer.Instance.Claim(suppressWhileHeld: false)) {
+                return false;
+            }
+
             // A full-screen overlay that declared it owns input takes the WHOLE frame: only the menu
             // drainer runs, and it keeps claiming a HELD nav key (suppressWhileHeld) — like the title
             // pump — so the key's auto-repeat can't leak to the game on the frames between our

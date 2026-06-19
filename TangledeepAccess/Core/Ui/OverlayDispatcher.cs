@@ -29,6 +29,7 @@ namespace TangledeepAccess.Ui {
                 { ModInputKind.ReadInfo, vt => vt.OnReadInfo },
                 { ModInputKind.MarkFavorite, vt => vt.OnMarkFavorite },
                 { ModInputKind.MarkTrash, vt => vt.OnMarkTrash },
+                { ModInputKind.AssignHotbar, vt => vt.OnAssignHotbar },
             };
 
         private readonly List<OverlayHandler> _handlers = new List<OverlayHandler>();
@@ -208,10 +209,13 @@ namespace TangledeepAccess.Ui {
         ) {
             var result = new TickResult();
 
+            // Carry the command's integer payload (e.g. the AssignHotbar slot) to the node action.
+            ctx.Arg = command.Dx;
+
             // Non-nav, non-confirm keys map to a NodeVtable action on the focused control (read
-            // info, mark favorite/trash, …). One generic path: invoke the selected action, never
-            // move or activate. Adding a future action key is a ModInputKind + vtable slot + one
-            // entry here + a keymap line.
+            // info, mark favorite/trash, assign-to-hotbar, …). One generic path: invoke the selected
+            // action, never move or activate. Adding a future action key is a ModInputKind + vtable
+            // slot + one entry here + a keymap line.
             Func<NodeVtable, Action<OverlayCtx>> selector;
             if (NodeActions.TryGetValue(command.Kind, out selector)) {
                 graph.InvokeNodeAction(ctx, selector);

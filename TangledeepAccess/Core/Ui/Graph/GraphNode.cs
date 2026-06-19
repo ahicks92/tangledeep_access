@@ -37,6 +37,10 @@ namespace TangledeepAccess.Ui.Graph {
         /// <summary>Optional. Toggle the control's "trash" mark.</summary>
         public Action<OverlayCtx> OnMarkTrash;
 
+        /// <summary>Optional. Assign this control to a hotbar slot; the 1-8 slot arrives in
+        /// <see cref="OverlayCtx.Arg"/>.</summary>
+        public Action<OverlayCtx> OnAssignHotbar;
+
         /// <summary>If true, the control is skipped by search.</summary>
         public bool ExcludeFromSearch;
     }

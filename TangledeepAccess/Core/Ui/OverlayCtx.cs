@@ -38,6 +38,11 @@ namespace TangledeepAccess.Ui {
         /// <summary>Set by the engine before invoking callbacks; may be null in bare tests.</summary>
         public IOverlayController Controller { get; internal set; }
 
+        /// <summary>An integer payload for the triggering command, set by the dispatcher before
+        /// invoking a node action — currently the 1-8 slot for <see cref="Controls.ModInputKind.AssignHotbar"/>.
+        /// Zero for commands that carry no argument.</summary>
+        public int Arg { get; internal set; }
+
         public OverlayCtx(MessageBuilder message, Modifiers modifiers) {
             Message = message;
             Modifiers = modifiers;

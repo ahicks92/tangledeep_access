@@ -176,9 +176,23 @@ In free play (no menu/dialog open):
 - L: scan everything in line of sight (hostiles first, then nearest)
 - Y: status (health, stamina, energy, level, active temporary effects)
 - A: hotbar readout (abilities/items on the active page)
+- ` (backtick): cycle to the next hotbar page and read it. Replaces the game's Ctrl "Cycle
+  Hotbars" — Ctrl is the screen reader's stop-speech key, so the mod strips that binding on
+  load (see `KeymapPatch`) and owns the cycle itself.
 - ' (apostrophe): repeat the last spoken phrase
 - / (slash): help — speak the list of mod commands
 - ; (semicolon): toggle the Look cursor (examine the map without moving)
+
+In menus and overlays (inventory, skill sheet, dialogs — the active overlay owns input):
+
+- Arrow keys: move between controls (rows are up/down, items within a row left/right)
+- Enter: confirm — the control's primary action (use / eat, equip, learn, switch mode)
+- K: read full info — the focused control's detailed tooltip
+- F / − (minus): toggle favorite / trash (inventory items)
+- 1 through 8: in the skill sheet's slot view, assign the focused active ability to that
+  hotbar slot, on the active page (cycle pages with backtick first to reach slots 9–16)
+- ` (backtick) and A: cycle / read the hotbar — these work even with an overlay open, so you
+  can pick the page before assigning
 
 While the Look cursor is active (it owns these keys and suppresses game input):
 

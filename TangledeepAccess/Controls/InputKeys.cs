@@ -40,6 +40,18 @@ namespace TangledeepAccess.Controls {
                 return ModInputAction.Of(ModInputKind.MarkTrash);
             }
 
+            // Number keys 1-8 assign the focused control to that hotbar slot (the skill sheet uses
+            // this; other overlays have no handler, so it falls back to re-reading the label). The
+            // slot number rides in Dx. KeyCode.Alpha1..Alpha8 are consecutive.
+            for (KeyCode k = KeyCode.Alpha1; k <= KeyCode.Alpha8; k++) {
+                if (Input.GetKeyDown(k)) {
+                    return new ModInputAction {
+                        Kind = ModInputKind.AssignHotbar,
+                        Dx = k - KeyCode.Alpha1 + 1,
+                    };
+                }
+            }
+
             return null;
         }
 
@@ -89,7 +101,8 @@ namespace TangledeepAccess.Controls {
 
         /// <summary>
         /// Free-play query hotkeys, the gameplay drainer's set: K read here, L scan, Y status,
-        /// A hotbar, backtick cycle hotbar, apostrophe repeat, slash help.
+        /// apostrophe repeat, slash help. The hotbar keys are NOT here — they live in
+        /// <see cref="Hotbar"/>, claimed by a top-priority drainer so they work inside menus too.
         /// </summary>
         public static ModInputAction? Query() {
             if (Input.GetKeyDown(KeyCode.K)) {
@@ -101,19 +114,29 @@ namespace TangledeepAccess.Controls {
             if (Input.GetKeyDown(KeyCode.Y)) {
                 return ModInputAction.Of(ModInputKind.ReadStatus);
             }
-            if (Input.GetKeyDown(KeyCode.A)) {
-                return ModInputAction.Of(ModInputKind.ReadHotbar);
-            }
-            // Backtick replaces the game's Ctrl "Cycle Hotbars" (Ctrl is the reader's stop key); the
-            // game leaves backtick unbound. We strip the game's Ctrl binding (see KeymapPatch).
-            if (Input.GetKeyDown(KeyCode.BackQuote)) {
-                return ModInputAction.Of(ModInputKind.CycleHotbar);
-            }
             if (Input.GetKeyDown(KeyCode.Quote)) {
                 return ModInputAction.Of(ModInputKind.RepeatLast);
             }
             if (Input.GetKeyDown(KeyCode.Slash)) {
                 return ModInputAction.Of(ModInputKind.Help);
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// The hotbar keys: A reads the active page, backtick cycles to the next page and reads it.
+        /// Claimed by the top-priority <see cref="HotbarInputDrainer"/> so the hotbar is reachable
+        /// even while a full-screen overlay owns input (e.g. flip pages before assigning in the skill
+        /// sheet). Backtick replaces the game's Ctrl "Cycle Hotbars" — Ctrl is the screen reader's
+        /// stop key — and the game's Ctrl binding is stripped on load (see KeymapPatch).
+        /// </summary>
+        public static ModInputAction? Hotbar() {
+            if (Input.GetKeyDown(KeyCode.A)) {
+                return ModInputAction.Of(ModInputKind.ReadHotbar);
+            }
+            if (Input.GetKeyDown(KeyCode.BackQuote)) {
+                return ModInputAction.Of(ModInputKind.CycleHotbar);
             }
 
             return null;

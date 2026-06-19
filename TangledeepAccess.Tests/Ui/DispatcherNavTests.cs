@@ -232,5 +232,35 @@ namespace TangledeepAccess.Tests.Ui {
             Assert.False(r.Moved);
             Assert.False(r.Activated);
         }
+
+        // A node whose assign-hotbar handler reads the slot off the context, so we can confirm the
+        // command's Dx payload reaches the action as OverlayCtx.Arg.
+        private sealed class AssignOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.Skills;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddNode(
+                    ControlId.Structural("only"),
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment("label"),
+                        OnAssignHotbar = ctx => ctx.Message.Fragment("slot " + ctx.Arg),
+                    }
+                );
+                builder.CaptureInput();
+            }
+        }
+
+        [Fact]
+        public void AssignHotbarPassesTheSlotThroughCtxArg() {
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(new AssignOverlay()));
+
+            d.Tick();
+            TickResult r = d.Tick(new ModInputAction { Kind = ModInputKind.AssignHotbar, Dx = 5 });
+
+            Assert.Equal("slot 5", r.Message?.Build());
+            Assert.False(r.Moved);
+            Assert.False(r.Activated);
+        }
     }
 }

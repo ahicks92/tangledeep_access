@@ -28,6 +28,14 @@ namespace TangledeepAccess.Speech {
         public const string HotbarEmpty = "empty";
         public const string HotbarUnavailable = "unavailable";
 
+        /// <summary>Where an ability is bound, e.g. "on hotbar 2 slot 3".</summary>
+        public static string OnHotbar(int page, int slot) {
+            return "on hotbar " + page + " slot " + slot;
+        }
+
+        /// <summary>Confirmation verb when an ability is bound, e.g. "Fireball assigned on hotbar 1 slot 3".</summary>
+        public const string Assigned = "assigned";
+
         // --- Skill sheet: header / modes -------------------------------------------------------
 
         public const string SkillsHeader = "Skills";
@@ -78,10 +86,34 @@ namespace TangledeepAccess.Speech {
             return Jp(jp) + " remaining";
         }
 
-        // --- Skill sheet: slot mode (not yet supported) ----------------------------------------
+        // --- Skill sheet: slot mode ------------------------------------------------------------
 
-        public const string SlotUnsupportedHead =
-            "Slot abilities are not yet supported by the screen reader.";
-        public const string SlotUnsupportedHint = "Choose Learn Abilities to learn new skills.";
+        public const string EquippedRow = "equipped abilities";
+        public const string EquippablePassivesRow = "equippable passives";
+        public const string AlwaysOnPassivesRow = "always-on passives";
+        public const string None = "none";
+        public const string Equipped = "equipped";
+        public const string AlwaysOn = "always on";
+        public const string Unlearned = "unlearned";
+        public const string Unequipped = "unequipped";
+        public const string NoFreePassiveSlots = "no free passive slots";
+        public const string CantChangeHere = "can't change skills here";
+        public const string CantUseFromHere = "can't use abilities from here";
+        public const string LearnInLearnTab = "learn it in the learn tab";
+
+        /// <summary>The passive-slot budget, e.g. "2 of 4 used".</summary>
+        public static string PassiveSlotsUsed(int used) {
+            return used + " of 4 used";
+        }
+
+        /// <summary>An active-ability row, named for the job it came from, e.g. "Brigand abilities".</summary>
+        public static string JobAbilitiesRow(string jobName) {
+            return jobName + " abilities";
+        }
+
+        /// <summary>The show-unlearned toggle's label, reflecting its state.</summary>
+        public static string ShowUnlearned(bool on) {
+            return "show unlearned abilities, " + (on ? "on" : "off");
+        }
     }
 }

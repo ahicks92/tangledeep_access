@@ -19,6 +19,20 @@ namespace TangledeepAccess.Dev {
     internal static class MenuInjector {
         public static string Inject(string verb) {
             string v = (verb ?? "").Trim().ToLowerInvariant();
+
+            // Number keys 1-8 assign the focused control to that hotbar slot (the skill sheet uses
+            // this). Routes through the menu drainer like any menu key.
+            if (v.Length == 1 && v[0] >= '1' && v[0] <= '8') {
+                InputQueue.Enqueue(
+                    MenuInputDrainer.Instance,
+                    new ModInputAction { Kind = ModInputKind.AssignHotbar, Dx = v[0] - '0' }
+                );
+                return "menu assign slot " + v + " -> queued\n";
+            }
+
+            // The hotbar keys are realized by the top-priority HotbarInputDrainer, not the menu
+            // drainer — enqueue with the matching source so the pump routes them correctly.
+            InputDrainer source = MenuInputDrainer.Instance;
             ModInputAction action;
             switch (v) {
                 // Directional: +x east, +y north (the dispatcher maps these to up/down/left/right).
@@ -51,16 +65,26 @@ namespace TangledeepAccess.Dev {
                 case "trash":
                     action = ModInputAction.Of(ModInputKind.MarkTrash);
                     break;
+                case "cycle":
+                case "backtick":
+                    source = HotbarInputDrainer.Instance;
+                    action = ModInputAction.Of(ModInputKind.CycleHotbar);
+                    break;
+                case "hotbar":
+                case "readhotbar":
+                    source = HotbarInputDrainer.Instance;
+                    action = ModInputAction.Of(ModInputKind.ReadHotbar);
+                    break;
                 default:
                     return "[unknown verb] '" + verb
-                        + "' - menu: up|down|left|right|confirm|readinfo|favorite|trash\n";
+                        + "' - menu: up|down|left|right|confirm|readinfo|favorite|trash|1-8|cycle|hotbar\n";
             }
 
             OverlayDispatcher dispatcher = UiRuntime.Dispatcher;
             bool capturing = dispatcher != null && dispatcher.CapturesInput;
-            InputQueue.Enqueue(MenuInputDrainer.Instance, action);
+            InputQueue.Enqueue(source, action);
             return "menu " + v + " -> queued"
-                + (capturing ? "" : " (warning: no overlay is capturing input now; read /speech)")
+                + (capturing ? "" : " (note: no overlay is capturing input now; read /speech)")
                 + "\n";
         }
     }
