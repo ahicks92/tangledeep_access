@@ -15,9 +15,9 @@ namespace TangledeepAccess.Gameplay {
     /// <summary>
     /// Collects everything in the hero's line of sight — actors (NPCs, monsters, stairs,
     /// destructibles) from <c>actorsInMap</c> plus ground items on visible tiles — as a list of
-    /// <see cref="Poi"/>. Shared by the scanner (which reads the whole list) and the look
-    /// cursor's jump-to-point-of-interest (which steps the cursor through it), so the
-    /// visibility/dedup logic lives in one place. Re-queries live state every call.
+    /// <see cref="Poi"/>. Drives the F2 entity radar (<see cref="ScannerAid"/>), which pings the
+    /// whole set; the textual scanner builds its own explored-map snapshot, not this. Re-queries
+    /// live state every call.
     /// </summary>
     internal static class Surroundings {
         public static List<Poi> CollectVisible(HeroPC hero) {
