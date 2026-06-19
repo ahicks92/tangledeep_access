@@ -87,7 +87,9 @@ namespace TangledeepAccess.Gameplay {
 
                 string name = SlotName(hb[idx]);
                 if (name != null) {
-                    message.ListItem((i + 1) + ", " + name);
+                    // Forced comma so the first slot is set off from the page number too
+                    // ("hotbar 2, 1, Foo, …"), not run together as "hotbar 2 1, Foo".
+                    message.ListItemForcedComma((i + 1) + ", " + name);
                     any = true;
                 }
             }
