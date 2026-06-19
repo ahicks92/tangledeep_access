@@ -105,7 +105,7 @@ namespace TangledeepAccess.Overlays {
             builder.AddLabel(ControlId.Structural("inv:stat:stamina"), ctx => Bar(ctx.Message, stats, StatTypes.STAMINA, "stamina"));
             builder.AddLabel(ControlId.Structural("inv:stat:energy"), ctx => Bar(ctx.Message, stats, StatTypes.ENERGY, "energy"));
             builder.AddLabel(ControlId.Structural("inv:stat:gold"), ctx => ctx.Message.Fragment(hero.GetMoney() + " gold"));
-            builder.AddLabel(ControlId.Structural("inv:stat:jp"), ctx => ctx.Message.Fragment((int)hero.GetCurJP() + " job points"));
+            builder.AddLabel(ControlId.Structural("inv:stat:jp"), ctx => ctx.Message.Fragment(ModStrings.Jp((int)hero.GetCurJP())));
             builder.AddLabel(
                 ControlId.Structural("inv:stat:xp"),
                 ctx => ctx.Message.PushFraction(stats.GetXP(), stats.GetXPToNextLevel(), "experience to next level")
