@@ -200,5 +200,37 @@ namespace TangledeepAccess.Tests.Ui {
             Assert.False(r.Moved);
             Assert.False(r.Activated);
         }
+
+        // A node wiring the mark-favorite / mark-trash vtable slots.
+        private sealed class MarkOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.Inventory;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddNode(
+                    ControlId.Structural("only"),
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment("label"),
+                        OnMarkFavorite = ctx => ctx.Message.Fragment("favorited"),
+                        OnMarkTrash = ctx => ctx.Message.Fragment("trashed"),
+                    }
+                );
+                builder.CaptureInput();
+            }
+        }
+
+        [Theory]
+        [InlineData(ModInputKind.MarkFavorite, "favorited")]
+        [InlineData(ModInputKind.MarkTrash, "trashed")]
+        public void MarkActionsRouteToTheirVtableSlot(ModInputKind kind, string expected) {
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(new MarkOverlay()));
+
+            d.Tick();
+            TickResult r = d.Tick(ModInputAction.Of(kind));
+
+            Assert.Equal(expected, r.Message?.Build());
+            Assert.False(r.Moved);
+            Assert.False(r.Activated);
+        }
     }
 }

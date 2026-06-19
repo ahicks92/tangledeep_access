@@ -21,6 +21,13 @@ namespace TangledeepAccess.Controls {
         /// game's hover tooltip. Distinct from Confirm, which is the primary action (use/equip).</summary>
         ReadInfo,
 
+        /// <summary>Toggle the focused control's "favorite" mark (menus). A toggle, not a one-way
+        /// set — blind players expect the key to flip the state both ways.</summary>
+        MarkFavorite,
+
+        /// <summary>Toggle the focused control's "trash" mark (menus). A toggle, like MarkFavorite.</summary>
+        MarkTrash,
+
         /// <summary>The game's UI focus changed — a non-keyboard event source, not a key press. A
         /// payload-free ping: the new focus lives in the focus watcher's published current value,
         /// read by the realizer when this fires. Emitted once per focus edge, stale→none included.</summary>

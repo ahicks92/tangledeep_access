@@ -324,10 +324,14 @@ namespace TangledeepAccess.Ui.Graph {
             }
         }
 
-        /// <summary>Read the focused control's detailed info (re-render first). Falls back to
-        /// re-reading the label when the control declares no <see cref="NodeVtable.OnReadInfo"/>,
-        /// so the read key always produces something.</summary>
-        public void ReadInfo(OverlayCtx ctx) {
+        /// <summary>
+        /// Invoke a read-only-style node action on the focused control (re-render first). The
+        /// <paramref name="selector"/> picks which <see cref="NodeVtable"/> action to run (read
+        /// info, mark favorite, …). Falls back to re-reading the label when the control declares no
+        /// such action, so the key always produces feedback rather than feeling dropped. This is the
+        /// single path for every non-nav, non-confirm menu key.
+        /// </summary>
+        public void InvokeNodeAction(OverlayCtx ctx, Func<NodeVtable, Action<OverlayCtx>> selector) {
             if (!Rerender(ctx)) {
                 return;
             }
@@ -337,8 +341,9 @@ namespace TangledeepAccess.Ui.Graph {
                 return;
             }
 
-            if (node.Vtable.OnReadInfo != null) {
-                node.Vtable.OnReadInfo(ctx);
+            Action<OverlayCtx> action = selector(node.Vtable);
+            if (action != null) {
+                action(ctx);
             } else if (node.Vtable.Label != null) {
                 node.Vtable.Label(ctx); // default: re-read the label
             }

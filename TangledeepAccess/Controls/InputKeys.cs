@@ -9,9 +9,11 @@ namespace TangledeepAccess.Controls {
     /// </summary>
     internal static class InputKeys {
         /// <summary>Menu navigation: arrows step focus, Enter confirms, K reads the focused
-        /// control's detailed info (the game's hover-tooltip equivalent). Orthogonal only.
-        /// Claimed only while an overlay owns input, so K here shadows the gameplay drainer's
-        /// "read here" K without conflict (different context, MenuInputDrainer has priority).</summary>
+        /// control's detailed info (the game's hover-tooltip equivalent), F toggles favorite, and
+        /// Minus toggles trash. Orthogonal nav only. Claimed only while an overlay owns input, so
+        /// these shadow the game's own bindings (F is also "fire ranged weapon" in free play, K is
+        /// the gameplay drainer's "read here") without conflict — different context, and
+        /// MenuInputDrainer has priority.</summary>
         public static ModInputAction? MenuNav() {
             if (Input.GetKeyDown(KeyCode.UpArrow)) {
                 return ModInputAction.Move(0, 1);
@@ -30,6 +32,12 @@ namespace TangledeepAccess.Controls {
             }
             if (Input.GetKeyDown(KeyCode.K)) {
                 return ModInputAction.Of(ModInputKind.ReadInfo);
+            }
+            if (Input.GetKeyDown(KeyCode.F)) {
+                return ModInputAction.Of(ModInputKind.MarkFavorite);
+            }
+            if (Input.GetKeyDown(KeyCode.Minus)) {
+                return ModInputAction.Of(ModInputKind.MarkTrash);
             }
 
             return null;

@@ -30,9 +30,9 @@ namespace TangledeepAccess.Overlays {
     /// column of identical action cells would read "drop, drop, drop" with no item context. Action
     /// cells are still keyed by the item's <c>actorUniqueID</c> (the builder rejects duplicate ids).</para>
     ///
-    /// <para><b>Scope (first cut):</b> stats and item identity/info read for real; the sort buttons
-    /// and per-item action buttons (use/eat, drop, favorite, trash) are labeled stubs that announce
-    /// "not yet implemented" on activation. Wiring them to the game's own methods is the next pass.</para>
+    /// <para><b>Scope:</b> stats and item identity/info read for real; favorite and trash work
+    /// (toggle on the cell via Enter, or row-wide via the F / Minus keys). The sort buttons and the
+    /// use/eat and drop action cells are still labeled stubs that announce "not yet implemented".</para>
     /// </summary>
     internal sealed class InventoryOverlay : IUiOverlay {
         // The complete filtered+sorted list backing the column; private on the column type.
@@ -183,8 +183,10 @@ namespace TangledeepAccess.Overlays {
                 // it just has to be non-equal to its neighbours' keys.
                 builder.StartRow("item:" + uid);
 
-                builder.AddItem(
+                AddRowCell(
+                    builder,
                     ControlId.Structural("inv:item:" + uid),
+                    item,
                     new NodeVtable {
                         Label = ctx => ItemSummary(ctx.Message, item),
                         // Confirm is the primary action players expect on an item (use / eat);
@@ -200,10 +202,26 @@ namespace TangledeepAccess.Overlays {
                     }
                 );
 
-                AddItemActionStub(builder, uid, primary);
-                AddItemActionStub(builder, uid, "drop");
-                AddFavoriteCell(builder, uid, item);
-                AddTrashCell(builder, uid, item);
+                AddStubCell(builder, "inv:action:" + primary + ":" + uid, item, primary);
+                AddStubCell(builder, "inv:action:drop:" + uid, item, "drop");
+                AddRowCell(
+                    builder,
+                    ControlId.Structural("inv:action:fav:" + uid),
+                    item,
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment(item.favorite ? "unfavorite" : "favorite"),
+                        OnClick = (ctx, mods) => ToggleFavorite(ctx, item),
+                    }
+                );
+                AddRowCell(
+                    builder,
+                    ControlId.Structural("inv:action:trash:" + uid),
+                    item,
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment(item.vendorTrash ? "untrash" : "trash"),
+                        OnClick = (ctx, mods) => ToggleTrash(ctx, item),
+                    }
+                );
 
                 builder.EndRow();
             }
@@ -226,55 +244,57 @@ namespace TangledeepAccess.Overlays {
             message.PushQuantity(item.GetQuantity());
         }
 
-        private static void AddItemActionStub(IOverlayBuilder builder, int uid, string verb) {
-            builder.AddClickable(
-                ControlId.Structural("inv:action:" + verb + ":" + uid),
-                ctx => ctx.Message.Fragment(verb),
-                (ctx, mods) => ctx.Message.Fragment(verb + ", not yet implemented")
-            );
+        // Add a cell to the current item row, attaching the row-wide favorite/trash key handlers so
+        // the F / Minus keys act on this item from ANY cell in its row (item, use, drop, …), not
+        // just the favorite/trash cells. Confirm still runs each cell's own OnClick.
+        private static void AddRowCell(IOverlayBuilder builder, ControlId id, Item item, NodeVtable vtable) {
+            vtable.OnMarkFavorite = ctx => ToggleFavorite(ctx, item);
+            vtable.OnMarkTrash = ctx => ToggleTrash(ctx, item);
+            builder.AddItem(id, vtable);
         }
 
-        // Favorite and trash are mutually exclusive flags (setting one clears the other). We flip
-        // them directly rather than via the game's MarkItemFavorite/MarkItemTrash, which look up the
-        // on-screen button and early-return — skipping the mutual-exclusion clear — for any item
-        // outside the game's 16-wide visible window. The structural key is a stable slug ("fav" /
-        // "trash"), not the state-dependent label, so toggling does not change the node's identity
-        // and the cursor stays put. We do NOT re-sort: a player marking several items in a row keeps
-        // a stable list (favorites only reorder to the top on the next manual sort / reopen).
-        private static void AddFavoriteCell(IOverlayBuilder builder, int uid, Item item) {
-            builder.AddClickable(
-                ControlId.Structural("inv:action:fav:" + uid),
-                ctx => ctx.Message.Fragment(item.favorite ? "unfavorite" : "favorite"),
-                (ctx, mods) => {
-                    item.favorite = !item.favorite;
-                    if (item.favorite) {
-                        item.vendorTrash = false;
-                        UIManagerScript.PlayCursorSound("GetSparkle");
-                        ctx.Message.Fragment("favorited");
-                    } else {
-                        UIManagerScript.PlayCursorSound("UITock");
-                        ctx.Message.Fragment("no longer favorite");
-                    }
+        // A not-yet-implemented action cell (use/eat, drop) — still row-wide markable.
+        private static void AddStubCell(IOverlayBuilder builder, string key, Item item, string verb) {
+            AddRowCell(
+                builder,
+                ControlId.Structural(key),
+                item,
+                new NodeVtable {
+                    Label = ctx => ctx.Message.Fragment(verb),
+                    OnClick = (ctx, mods) => ctx.Message.Fragment(verb + ", not yet implemented"),
                 }
             );
         }
 
-        private static void AddTrashCell(IOverlayBuilder builder, int uid, Item item) {
-            builder.AddClickable(
-                ControlId.Structural("inv:action:trash:" + uid),
-                ctx => ctx.Message.Fragment(item.vendorTrash ? "untrash" : "trash"),
-                (ctx, mods) => {
-                    item.vendorTrash = !item.vendorTrash;
-                    if (item.vendorTrash) {
-                        item.favorite = false;
-                        UIManagerScript.PlayCursorSound("UITick");
-                        ctx.Message.Fragment("marked as trash");
-                    } else {
-                        UIManagerScript.PlayCursorSound("UITock");
-                        ctx.Message.Fragment("no longer trash");
-                    }
-                }
-            );
+        // Favorite and trash are mutually exclusive flags (setting one clears the other), and these
+        // are TOGGLES — F/Enter flips the state both ways, which blind players expect even though the
+        // game calls the action "mark". We flip the flag directly rather than via the game's
+        // MarkItemFavorite/MarkItemTrash, which look up the on-screen button and early-return —
+        // skipping the mutual-exclusion clear — for any item outside the game's 16-wide visible
+        // window. No re-sort on toggle: marking several items in a row keeps a stable list (favorites
+        // reorder to the top only on the next manual sort / reopen).
+        private static void ToggleFavorite(OverlayCtx ctx, Item item) {
+            item.favorite = !item.favorite;
+            if (item.favorite) {
+                item.vendorTrash = false;
+                UIManagerScript.PlayCursorSound("GetSparkle");
+                ctx.Message.Fragment("favorited");
+            } else {
+                UIManagerScript.PlayCursorSound("UITock");
+                ctx.Message.Fragment("no longer favorite");
+            }
+        }
+
+        private static void ToggleTrash(OverlayCtx ctx, Item item) {
+            item.vendorTrash = !item.vendorTrash;
+            if (item.vendorTrash) {
+                item.favorite = false;
+                UIManagerScript.PlayCursorSound("UITick");
+                ctx.Message.Fragment("marked as trash");
+            } else {
+                UIManagerScript.PlayCursorSound("UITock");
+                ctx.Message.Fragment("no longer trash");
+            }
         }
     }
 }

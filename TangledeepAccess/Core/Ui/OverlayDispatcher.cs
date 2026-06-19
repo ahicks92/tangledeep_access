@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using TangledeepAccess.Controls;
@@ -21,6 +22,15 @@ namespace TangledeepAccess.Ui {
     /// state, but never touches the engine itself, keeping it unit-testable off-engine.</para>
     /// </summary>
     public sealed class OverlayDispatcher {
+        // Menu keys that map to a read-only-style NodeVtable action on the focused control, each
+        // resolving the vtable slot to invoke. The single registry for non-nav, non-confirm keys.
+        private static readonly Dictionary<ModInputKind, Func<NodeVtable, Action<OverlayCtx>>> NodeActions =
+            new Dictionary<ModInputKind, Func<NodeVtable, Action<OverlayCtx>>> {
+                { ModInputKind.ReadInfo, vt => vt.OnReadInfo },
+                { ModInputKind.MarkFavorite, vt => vt.OnMarkFavorite },
+                { ModInputKind.MarkTrash, vt => vt.OnMarkTrash },
+            };
+
         private readonly List<OverlayHandler> _handlers = new List<OverlayHandler>();
         private readonly Dictionary<OverlayId, GraphState> _cache =
             new Dictionary<OverlayId, GraphState>();
@@ -198,9 +208,13 @@ namespace TangledeepAccess.Ui {
         ) {
             var result = new TickResult();
 
-            if (command.Kind == ModInputKind.ReadInfo) {
-                // Read-only: speak the focused control's detail; never moves or activates.
-                graph.ReadInfo(ctx);
+            // Non-nav, non-confirm keys map to a NodeVtable action on the focused control (read
+            // info, mark favorite/trash, …). One generic path: invoke the selected action, never
+            // move or activate. Adding a future action key is a ModInputKind + vtable slot + one
+            // entry here + a keymap line.
+            Func<NodeVtable, Action<OverlayCtx>> selector;
+            if (NodeActions.TryGetValue(command.Kind, out selector)) {
+                graph.InvokeNodeAction(ctx, selector);
                 result.Message = message;
                 return result;
             }

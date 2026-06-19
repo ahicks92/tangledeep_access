@@ -31,6 +31,12 @@ namespace TangledeepAccess.Ui.Graph {
         /// <summary>Optional. Read positional / coordinate info.</summary>
         public Action<OverlayCtx> OnReadCoords;
 
+        /// <summary>Optional. Toggle the control's "favorite" mark.</summary>
+        public Action<OverlayCtx> OnMarkFavorite;
+
+        /// <summary>Optional. Toggle the control's "trash" mark.</summary>
+        public Action<OverlayCtx> OnMarkTrash;
+
         /// <summary>If true, the control is skipped by search.</summary>
         public bool ExcludeFromSearch;
     }
