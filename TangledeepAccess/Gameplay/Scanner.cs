@@ -104,8 +104,10 @@ namespace TangledeepAccess.Gameplay {
     /// nearest-first sort); pressing End ("rescan") rebuilds it, and it auto-rebuilds on a map change.
     /// Per the project's no-stale-speech rule, the per-entry name and offset are NOT frozen: each is
     /// re-queried from the live actor (resolved by id) at speak time, so a moved monster's offset is
-    /// current and a vanished one reads "gone". Sort uses Manhattan distance from the hero at rescan,
-    /// ties broken by tile x then y.</para>
+    /// current. A snapshot member that has since died or been opened is "gone": stepping
+    /// (entry/category nav) skips it rather than landing on it, so the readout only counts what is
+    /// still there. Sort uses Manhattan distance from the hero at rescan, ties broken by tile x then
+    /// y.</para>
     ///
     /// <para>Two navigation axes: category (the broad bucket, defaulting to <see cref="ScanCategory.All"/>)
     /// and entry (one feature within it, nearest first). Category navigation just re-filters the held
@@ -207,13 +209,14 @@ namespace TangledeepAccess.Gameplay {
                 return message;
             }
 
+            HashSet<int> live = LiveIds();
             int start = IndexOf(_category);
-            // Skip empty categories; wrap. i runs a full lap so we land back on the current category
-            // only if it is the single non-empty one. All is never empty while the snapshot is.
+            // Skip categories with no live entries; wrap. i runs a full lap so we land back on the
+            // current category only if it is the single non-empty one.
             for (int i = 1; i <= Order.Length; i++) {
                 int idx = ((start + dir * i) % Order.Length + Order.Length) % Order.Length;
                 ScanCategory cat = Order[idx];
-                List<ScanEntry> view = View(cat);
+                List<ScanEntry> view = View(cat, live);
                 if (view.Count == 0) {
                     continue;
                 }
@@ -240,10 +243,10 @@ namespace TangledeepAccess.Gameplay {
                 return message;
             }
 
-            List<ScanEntry> view = View(_category);
+            List<ScanEntry> view = View(_category, LiveIds());
             if (view.Count == 0) {
-                // The current category filtered to nothing (e.g. it emptied while All stayed live):
-                // bootstrap onto the next non-empty category instead of saying nothing.
+                // The current category has no live entries left (all gone since the scan): bootstrap
+                // onto the next category that does instead of saying nothing.
                 return StepCategory(dir);
             }
 
@@ -272,13 +275,15 @@ namespace TangledeepAccess.Gameplay {
                 return new MessageBuilder().Fragment("nothing in range");
             }
 
-            List<ScanEntry> view = View(_category);
-            int cur = IndexOfId(view, _selectedId);
+            // The held selection is sought across the whole snapshot, not the live-filtered view, so
+            // Home still works for a feature that vanished after it was selected (it reads at the last
+            // tile). Navigation already keeps the selection off gone entries.
+            int cur = IndexOfId(_snapshot, _selectedId);
             if (cur < 0) {
                 return new MessageBuilder().Fragment("nothing selected");
             }
 
-            ScanEntry entry = view[cur];
+            ScanEntry entry = _snapshot[cur];
             Actor a = map.FindActorByID(entry.ActorId);
             Vector2 target = IsLive(a) ? a.GetPos() : new Vector2(entry.X, entry.Y);
             return ExplorationCursor.JumpTo(target);
@@ -297,7 +302,7 @@ namespace TangledeepAccess.Gameplay {
 
             DoRescan(hero);
             message.Fragment("rescanned");
-            List<ScanEntry> view = View(_category);
+            List<ScanEntry> view = View(_category, LiveIds());
             if (view.Count == 0) {
                 message.ListItem("nothing in range");
                 return message;
@@ -386,20 +391,39 @@ namespace TangledeepAccess.Gameplay {
             return p.Y - q.Y;
         }
 
-        // The entries of a category: the whole snapshot for All, else a stable filtered copy.
-        private static List<ScanEntry> View(ScanCategory cat) {
-            if (cat == ScanCategory.All) {
-                return _snapshot;
-            }
-
+        // The navigable entries of a category, in snapshot order: those of the category (All spans
+        // every category) whose actor is still present. Filtering against the live set means stepping
+        // never lands on a "gone" entry — a snapshot member that has since died or been opened is
+        // skipped, not announced. Home is the exception: it keeps its existing selection and can still
+        // point at one that vanished after it was selected (it reads via the cursor at the last tile).
+        private static List<ScanEntry> View(ScanCategory cat, HashSet<int> live) {
             var view = new List<ScanEntry>();
             foreach (ScanEntry e in _snapshot) {
-                if (e.Category == cat) {
+                if (live.Contains(e.ActorId) && (cat == ScanCategory.All || e.Category == cat)) {
                     view.Add(e);
                 }
             }
 
             return view;
+        }
+
+        // The actorUniqueIDs still present on the active map (resolved, not destroyed). Rebuilt each
+        // navigation in one pass, so View can cheaply exclude snapshot entries whose actor is gone.
+        private static HashSet<int> LiveIds() {
+            var ids = new HashSet<int>();
+            Map map = MapMasterScript.activeMap;
+            HeroPC hero = GameMasterScript.heroPCActor;
+            if (map == null) {
+                return ids;
+            }
+
+            foreach (Actor a in map.actorsInMap) {
+                if (a != null && a != hero && !a.destroyed) {
+                    ids.Add(a.actorUniqueID);
+                }
+            }
+
+            return ids;
         }
 
         // --- Speech ---
