@@ -182,7 +182,7 @@ namespace TangledeepAccess.Overlays {
                 builder.StartRow("item:" + uid);
 
                 builder.AddClickable(
-                    ControlId.Referenced(item, "inv:item:" + uid),
+                    ControlId.Structural("inv:item:" + uid),
                     ctx => ItemSummary(ctx.Message, item),
                     (ctx, mods) => ctx.Message.Fragment(GameLabelReader.Clean(item.GetInformationForTooltip()))
                 );
