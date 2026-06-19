@@ -29,7 +29,61 @@ namespace TangledeepAccess.Tests.Audio {
         public void RenderLengthIsInterleavedStereo() {
             var t = new GrainTimeline().Add(new SineGrain(440), 0.0, 1.0, 0.0);
             float[] pcm = t.RenderStereo(48000);
-            Assert.Equal(48000 * 2, pcm.Length);
+            // 1 s of frames plus the ITD tail padding, interleaved (× 2).
+            Assert.Equal((48000 + GrainTimeline.ItdPaddingFrames(48000)) * 2, pcm.Length);
+        }
+
+        [Fact]
+        public void InterauralDelayMatchesPanWithSubSamplePrecision() {
+            // Pan right → right ear is near (no delay), left ear is far (delayed by |pan|·max).
+            // At pan 0.5 the delay is 0.5·0.0007·48000 = 16.8 samples — a fractional value the
+            // allpass path must reproduce, which integer rounding could not.
+            const int sr = 48000;
+            const double pan = 0.5;
+            var tone = new AdsrGrain(new SineGrain(440), 0.01, 0.02, 0.04, 0.03);
+            float[] pcm = new GrainTimeline().Add(tone, 0.0, 1.0, pan).RenderStereo(sr);
+
+            float[] near = Channel(pcm, 1);  // right
+            float[] far = Channel(pcm, 0);   // left
+            double lag = EstimateLag(near, far, 40);
+
+            double expected = pan * GrainTimeline.MaxInterauralDelaySeconds * sr;
+            Assert.Equal(expected, lag, 1);  // within 0.05 samples
+        }
+
+        // Deinterleave one channel (0 left, 1 right) into a mono array.
+        private static float[] Channel(float[] pcm, int channel) {
+            var mono = new float[pcm.Length / 2];
+            for (int f = 0; f < mono.Length; f++) {
+                mono[f] = pcm[2 * f + channel];
+            }
+            return mono;
+        }
+
+        // Fractional lag (in frames) by which `far` trails `near`, via cross-correlation with
+        // parabolic interpolation around the integer peak. Searches lags [0, maxLag].
+        private static double EstimateLag(float[] near, float[] far, int maxLag) {
+            double Corr(int lag) {
+                double sum = 0.0;
+                for (int n = lag < 0 ? -lag : 0; n < near.Length && n + lag < near.Length; n++) {
+                    sum += near[n] * far[n + lag];
+                }
+                return sum;
+            }
+
+            int best = 0;
+            double bestCorr = double.NegativeInfinity;
+            for (int lag = 0; lag <= maxLag; lag++) {
+                double c = Corr(lag);
+                if (c > bestCorr) {
+                    bestCorr = c;
+                    best = lag;
+                }
+            }
+            double cm = Corr(best - 1), c0 = Corr(best), cp = Corr(best + 1);
+            double denom = cm - 2.0 * c0 + cp;
+            double offset = denom != 0.0 ? 0.5 * (cm - cp) / denom : 0.0;
+            return best + offset;
         }
 
         [Fact]
