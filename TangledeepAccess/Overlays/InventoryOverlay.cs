@@ -3,6 +3,7 @@ using HarmonyLib;
 using TangledeepAccess.Focus;
 using TangledeepAccess.Speech;
 using TangledeepAccess.Ui;
+using TangledeepAccess.Ui.Graph;
 
 namespace TangledeepAccess.Overlays {
     /// <summary>
@@ -177,17 +178,29 @@ namespace TangledeepAccess.Overlays {
                 }
 
                 int uid = item.actorUniqueID;
+                string primary = item.IsItemFood() ? "eat" : "use";
                 // A distinct row key per item so up/down never preserves a column (see class docs);
                 // it just has to be non-equal to its neighbours' keys.
                 builder.StartRow("item:" + uid);
 
-                builder.AddClickable(
+                builder.AddItem(
                     ControlId.Structural("inv:item:" + uid),
-                    ctx => ItemSummary(ctx.Message, item),
-                    (ctx, mods) => ctx.Message.Fragment(GameLabelReader.Clean(item.GetInformationForTooltip()))
+                    new NodeVtable {
+                        Label = ctx => ItemSummary(ctx.Message, item),
+                        // Confirm is the primary action players expect on an item (use / eat);
+                        // stubbed until item actions are wired.
+                        OnClick = (ctx, mods) => ctx.Message.Fragment(primary + ", not yet implemented"),
+                        // Read-info (K) is the tooltip. NOTE: GetInformationForTooltip /
+                        // GetItemInformationNoName has a WRITE side effect — it clears the item's
+                        // newlyPickedUp ("new") flag, which is saved state. That is precisely the
+                        // chosen "inspected" moment (option B), so it belongs here; never call it
+                        // speculatively (e.g. to pre-build a label) or "new" clears unseen.
+                        OnReadInfo = ctx =>
+                            ctx.Message.Fragment(GameLabelReader.Clean(item.GetInformationForTooltip())),
+                    }
                 );
 
-                AddItemActionStub(builder, uid, item.IsItemFood() ? "eat" : "use");
+                AddItemActionStub(builder, uid, primary);
                 AddItemActionStub(builder, uid, "drop");
                 AddItemActionStub(builder, uid, item.favorite ? "unfavorite" : "favorite");
                 AddItemActionStub(builder, uid, item.vendorTrash ? "untrash" : "trash");

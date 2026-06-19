@@ -148,5 +148,57 @@ namespace TangledeepAccess.Tests.Ui {
                 );
             }
         }
+
+        // One node with both a label and a distinct read-info handler, so a ReadInfo command can
+        // be told apart from a label re-read.
+        private sealed class ReadInfoOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.Inventory;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddNode(
+                    ControlId.Structural("only"),
+                    new NodeVtable {
+                        Label = ctx => ctx.Message.Fragment("label"),
+                        OnReadInfo = ctx => ctx.Message.Fragment("details"),
+                    }
+                );
+            }
+        }
+
+        [Fact]
+        public void ReadInfoRunsOnReadInfoNotMoveOrActivate() {
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(new ReadInfoOverlay()));
+
+            d.Tick();
+            TickResult r = d.Tick(ModInputAction.Of(ModInputKind.ReadInfo));
+
+            Assert.Equal("details", r.Message?.Build());
+            Assert.False(r.Moved);
+            Assert.False(r.Activated);
+        }
+
+        // A node with a label but no read-info handler: ReadInfo falls back to the label.
+        private sealed class LabelOnlyOverlay : IUiOverlay {
+            public OverlayId Id => OverlayId.Inventory;
+
+            public void Build(IOverlayBuilder builder) {
+                builder.AddLabel(ControlId.Structural("only"), ctx => ctx.Message.Fragment("label"));
+                builder.CaptureInput();
+            }
+        }
+
+        [Fact]
+        public void ReadInfoFallsBackToLabelWhenNoHandler() {
+            var d = new OverlayDispatcher();
+            d.Register(() => OverlayResult.Active(new LabelOnlyOverlay()));
+
+            d.Tick();
+            TickResult r = d.Tick(ModInputAction.Of(ModInputKind.ReadInfo));
+
+            Assert.Equal("label", r.Message?.Build());
+            Assert.False(r.Moved);
+            Assert.False(r.Activated);
+        }
     }
 }

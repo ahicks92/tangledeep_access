@@ -8,7 +8,10 @@ namespace TangledeepAccess.Controls {
     /// are grouped by the context that consults each set; a context composes the groups it honors.
     /// </summary>
     internal static class InputKeys {
-        /// <summary>Menu navigation: arrows step focus, Enter confirms. Orthogonal only.</summary>
+        /// <summary>Menu navigation: arrows step focus, Enter confirms, K reads the focused
+        /// control's detailed info (the game's hover-tooltip equivalent). Orthogonal only.
+        /// Claimed only while an overlay owns input, so K here shadows the gameplay drainer's
+        /// "read here" K without conflict (different context, MenuInputDrainer has priority).</summary>
         public static ModInputAction? MenuNav() {
             if (Input.GetKeyDown(KeyCode.UpArrow)) {
                 return ModInputAction.Move(0, 1);
@@ -24,6 +27,9 @@ namespace TangledeepAccess.Controls {
             }
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) {
                 return ModInputAction.Of(ModInputKind.Confirm);
+            }
+            if (Input.GetKeyDown(KeyCode.K)) {
+                return ModInputAction.Of(ModInputKind.ReadInfo);
             }
 
             return null;

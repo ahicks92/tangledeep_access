@@ -323,5 +323,25 @@ namespace TangledeepAccess.Ui.Graph {
                 node.Vtable.Label(ctx); // default: re-read the label
             }
         }
+
+        /// <summary>Read the focused control's detailed info (re-render first). Falls back to
+        /// re-reading the label when the control declares no <see cref="NodeVtable.OnReadInfo"/>,
+        /// so the read key always produces something.</summary>
+        public void ReadInfo(OverlayCtx ctx) {
+            if (!Rerender(ctx)) {
+                return;
+            }
+
+            GraphNode node;
+            if (!_current.Nodes.TryGetValue(_state.CurKey, out node)) {
+                return;
+            }
+
+            if (node.Vtable.OnReadInfo != null) {
+                node.Vtable.OnReadInfo(ctx);
+            } else if (node.Vtable.Label != null) {
+                node.Vtable.Label(ctx); // default: re-read the label
+            }
+        }
     }
 }

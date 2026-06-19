@@ -198,6 +198,13 @@ namespace TangledeepAccess.Ui {
         ) {
             var result = new TickResult();
 
+            if (command.Kind == ModInputKind.ReadInfo) {
+                // Read-only: speak the focused control's detail; never moves or activates.
+                graph.ReadInfo(ctx);
+                result.Message = message;
+                return result;
+            }
+
             if (command.Kind == ModInputKind.Confirm) {
                 ControlId cur = state.CurKey;
                 GraphNode node = null;

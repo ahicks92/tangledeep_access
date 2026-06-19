@@ -17,6 +17,10 @@ namespace TangledeepAccess.Controls {
         /// <summary>Confirm / activate the focused control (menus).</summary>
         Confirm,
 
+        /// <summary>Read detailed info about the focused control (menus) — the equivalent of the
+        /// game's hover tooltip. Distinct from Confirm, which is the primary action (use/equip).</summary>
+        ReadInfo,
+
         /// <summary>The game's UI focus changed — a non-keyboard event source, not a key press. A
         /// payload-free ping: the new focus lives in the focus watcher's published current value,
         /// read by the realizer when this fires. Emitted once per focus edge, stale→none included.</summary>
