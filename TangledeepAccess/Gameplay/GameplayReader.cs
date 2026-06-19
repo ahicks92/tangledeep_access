@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using TangledeepAccess.Controls;
 using TangledeepAccess.Focus;
 using TangledeepAccess.Speech;
@@ -55,17 +54,17 @@ namespace TangledeepAccess.Gameplay {
     }
 
     /// <summary>
-    /// Computes spoken answers to the player's on-demand spatial queries during gameplay:
-    /// "read here" (the hero's tile) and "scan" (a Factorio-Access-style sweep of everything in
-    /// view, by direction and distance). All reads re-query live game state at call time — no
-    /// caching — and respect the hero's line of sight via <c>visibleTilesArray</c>. Runs on the
-    /// Unity main thread from the per-frame pump; the input hook only requests the command.
+    /// Computes spoken answers to the player's on-demand free-play queries: "read here" (the hero's
+    /// own tile and wall-shape, on S) and status. All reads re-query live game state at call time —
+    /// no caching — and respect the hero's line of sight via <c>visibleTilesArray</c>. Runs on the
+    /// Unity main thread from the per-frame pump; the input hook only requests the command. The
+    /// exploration cursor's reads are separate (<see cref="ExplorationCursor"/>).
     /// </summary>
     internal static class GameplayReader {
         /// <summary>
-        /// Compute the spoken answer for a free-play query, or null if not in play. The look cursor's
-        /// own keys — its toggle and movement — never reach here; <see cref="LookInputDrainer"/>
-        /// realizes those. This handles only the query hotkeys. Repeat-last is realized in
+        /// Compute the spoken answer for a free-play query, or null if not in play. The exploration
+        /// cursor's own keys never reach here; <see cref="ExplorationCursorInputDrainer"/> realizes
+        /// those. This handles only the query hotkeys. Repeat-last is realized in
         /// <see cref="GameplayInputDrainer"/>.
         /// </summary>
         public static MessageBuilder Execute(ModInputAction action) {
@@ -75,11 +74,13 @@ namespace TangledeepAccess.Gameplay {
             // in-play gate. It is one authored paragraph, so it is a single fragment.
             if (action.Kind == ModInputKind.Help) {
                 return message.Fragment(
-                    "Tangledeep Access commands. K, read here and surroundings. "
-                    + "L, scan in view. Y, status. A, hotbar; backtick, cycle hotbar. Semicolon, look cursor; "
-                    + "then arrows or numpad to move it, brackets to jump between things in view, "
-                    + "Home to recenter. Page up and page down, step scanner entries; control plus "
-                    + "page up or down, step scanner categories. "
+                    "Tangledeep Access commands. S, read your tile and surroundings. Y, status. "
+                    + "The exploration cursor: K reads the cursor's tile; U I O, J L, M comma period "
+                    + "move it in eight directions; Alt K toggles whether it follows you, on by "
+                    + "default; Ctrl K returns it to you. "
+                    + "Backtick, cycle hotbar and read it. "
+                    + "Page up and page down, step scanner entries; control plus page up or down, "
+                    + "step scanner categories. "
                     + "Navigation aids sit on F keys. F1 is wall echo: shift F1 toggles it on or off "
                     + "(on by default), control F1 fires it once. F2 is the entity scanner: control F2 "
                     + "toggles a continuous sweep of things in view, panned by side-to-side position "
@@ -96,9 +97,6 @@ namespace TangledeepAccess.Gameplay {
             switch (action.Kind) {
                 case ModInputKind.ReadHere:
                     ReadHere(message, hero);
-                    break;
-                case ModInputKind.Scan:
-                    Scan(message, hero);
                     break;
                 case ModInputKind.ReadStatus:
                     ReadStatus(message, hero);
@@ -148,21 +146,15 @@ namespace TangledeepAccess.Gameplay {
         // --- Read here ---
 
         private static void ReadHere(MessageBuilder message, HeroPC hero) {
-            // Read-here follows the look cursor when it is active, so K examines wherever the
-            // player has parked the cursor; otherwise it reads the hero's own tile.
-            bool atCursor = LookCursor.Active;
-            Vector2 pos = atCursor ? LookCursor.Position : hero.GetPos();
+            // The player's own tile (S). The exploration cursor is read separately via K — see
+            // ExplorationCursor — so this always reads where the hero stands.
+            Vector2 pos = hero.GetPos();
 
             message.Fragment(MapMasterScript.activeMap.GetName());
             message.ListItem().PushAbsoluteCoordinates(pos);
             message.ListItem();
-            if (atCursor) {
-                // Remote tile: defer to the cursor's own LOS-gated read (contents + offset).
-                LookCursor.Read(message, hero);
-            } else {
-                // The hero's own tile: terrain + items, not the hero actor.
-                TileDescriber.Contents(message, MapMasterScript.GetTile(pos), includeActor: false);
-            }
+            // The hero's own tile: terrain + items, not the hero actor.
+            TileDescriber.Contents(message, MapMasterScript.GetTile(pos), includeActor: false);
 
             AppendShape(message, pos);
         }
@@ -189,33 +181,12 @@ namespace TangledeepAccess.Gameplay {
         // The shape is the static wall geometry around the hero, so a cell counts as a wall only
         // when the *terrain* is impassable — the map edge, a wall/void tile, or solid terrain.
         // Deliberately not actor-aware (a monster or NPC standing beside you must not reshape the
-        // room; those are reported by scan and the log) and not visibility-gated: we read the true
-        // geometry, so an adjacent tile hidden by the diagonal line-of-sight pinch still reads as
-        // the wall it is rather than a phantom exit. Diagonal pinches that survive map generation
+        // room; those are reported by the scanner and the log) and not visibility-gated: we read the
+        // true geometry, so an adjacent tile hidden by the diagonal line-of-sight pinch still reads
+        // as the wall it is rather than a phantom exit. Diagonal pinches that survive map generation
         // are walkable via corner-cutting, so an open diagonal is always a real exit.
         private static bool IsWallForShape(Vector2 p) {
             return TerrainQuery.IsImpassableWall(p);
-        }
-
-        // --- Scan ---
-
-        private static void Scan(MessageBuilder message, HeroPC hero) {
-            Vector2 hp = hero.GetPos();
-            List<Poi> found = Surroundings.CollectVisible(hero);
-            if (found.Count == 0) {
-                message.Fragment("Nothing in view.");
-                return;
-            }
-
-            // Hostiles first, then by distance — what to react to leads.
-            found.Sort((a, b) => a.Hostile != b.Hostile ? (a.Hostile ? -1 : 1) : a.Steps - b.Steps);
-
-            message.Fragment(found.Count + (found.Count == 1 ? " thing in view" : " things in view"));
-            foreach (Poi p in found) {
-                message.ListItem(p.Name);
-                message.Fragment(p.Hostile ? "(hostile)" : null);
-                message.PushRelativeCoordinates(p.Pos - hp);
-            }
         }
     }
 }

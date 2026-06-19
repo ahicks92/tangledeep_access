@@ -31,7 +31,7 @@ namespace TangledeepAccess.Tests.Controls {
         [Fact]
         public void DrainReturnsEnqueuedEventsInArrivalOrderTaggedWithTheirSource() {
             InputQueue.Enqueue(A, ModInputAction.Move(0, 1));
-            InputQueue.Enqueue(B, ModInputAction.Of(ModInputKind.Scan));
+            InputQueue.Enqueue(B, ModInputAction.Of(ModInputKind.ReadStatus));
             InputQueue.Enqueue(A, ModInputAction.Move(-1, 0));
 
             var drained = InputQueue.Drain();
@@ -41,7 +41,7 @@ namespace TangledeepAccess.Tests.Controls {
             Assert.Equal(ModInputKind.Move, drained[0].Action.Kind);
             Assert.Equal(1, drained[0].Action.Dy);
             Assert.Same(B, drained[1].Source);
-            Assert.Equal(ModInputKind.Scan, drained[1].Action.Kind);
+            Assert.Equal(ModInputKind.ReadStatus, drained[1].Action.Kind);
             Assert.Same(A, drained[2].Source);
             Assert.Equal(-1, drained[2].Action.Dx);
         }

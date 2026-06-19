@@ -11,7 +11,7 @@ namespace TangledeepAccess.Controls {
     /// </summary>
     public enum ModInputKind {
         /// <summary>Directional. Carries Dx/Dy in {-1,0,1} (+x east, +y north). In a menu it steps
-        /// focus (orthogonal only); with the look cursor it steps the cursor one tile (8-way).</summary>
+        /// focus (orthogonal only); with the exploration cursor it steps the cursor one tile (8-way).</summary>
         Move,
 
         /// <summary>Confirm / activate the focused control (menus).</summary>
@@ -43,9 +43,8 @@ namespace TangledeepAccess.Controls {
         /// read by the realizer when this fires. Emitted once per focus edge, stale→none included.</summary>
         FocusChanged,
 
-        // Free-play spatial queries.
+        // Free-play spatial queries. ReadHere reads the player's own tile (S).
         ReadHere,
-        Scan,
         ReadStatus,
         ReadHotbar,
 
@@ -67,11 +66,11 @@ namespace TangledeepAccess.Controls {
         NavAidToggle,
         NavAidTrigger,
 
-        // Look-cursor control.
-        LookToggle,
-        LookRecenter,
-        LookNextPoi,
-        LookPrevPoi,
+        // Exploration cursor control (free play). Move steps the cursor (the speculation ring);
+        // these are its read/follow/recenter verbs.
+        CursorRead,
+        CursorFollowToggle,
+        CursorRecenter,
 
         // Scanner: navigating the categorized, distance-sorted map readout. Two axes —
         // category (the broad bucket) and entry (one feature within it). Modeless: the

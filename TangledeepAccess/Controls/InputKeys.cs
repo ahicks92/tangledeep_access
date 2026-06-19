@@ -73,47 +73,16 @@ namespace TangledeepAccess.Controls {
                 || Input.GetKey(KeyCode.KeypadEnter);
         }
 
-        /// <summary>
-        /// True while any look-cursor directional (arrows or numpad 1-9 less 5) is held — not just
-        /// the key-down frame. Lets the look drainer keep suppressing a held movement key on its
-        /// repeat frames so it cannot leak to the game and walk the hero alongside the cursor.
-        /// </summary>
-        public static bool AnyLookDirectionalHeld() {
-            return Input.GetKey(KeyCode.UpArrow)
-                || Input.GetKey(KeyCode.DownArrow)
-                || Input.GetKey(KeyCode.LeftArrow)
-                || Input.GetKey(KeyCode.RightArrow)
-                || Input.GetKey(KeyCode.Keypad1)
-                || Input.GetKey(KeyCode.Keypad2)
-                || Input.GetKey(KeyCode.Keypad3)
-                || Input.GetKey(KeyCode.Keypad4)
-                || Input.GetKey(KeyCode.Keypad6)
-                || Input.GetKey(KeyCode.Keypad7)
-                || Input.GetKey(KeyCode.Keypad8)
-                || Input.GetKey(KeyCode.Keypad9);
-        }
-
-        /// <summary>Semicolon toggles the look cursor. The look drainer claims it in both states —
-        /// off to turn on, on to turn off — so the cursor owns its whole lifecycle.</summary>
-        public static ModInputAction? LookToggle() {
-            if (Input.GetKeyDown(KeyCode.Semicolon)) {
-                return ModInputAction.Of(ModInputKind.LookToggle);
-            }
-
-            return null;
-        }
 
         /// <summary>
-        /// Free-play query hotkeys, the gameplay drainer's set: K read here, L scan, Y status,
-        /// apostrophe repeat, slash help. The hotbar keys are NOT here — they live in
-        /// <see cref="Hotbar"/>, claimed by a top-priority drainer so they work inside menus too.
+        /// Free-play query hotkeys, the gameplay drainer's set: S reads the player's own tile, Y
+        /// status, apostrophe repeat, slash help. Cursor reads (K) live with the cursor drainer in
+        /// <see cref="CursorKeys"/>; the hotbar keys live in <see cref="Hotbar"/>, claimed by a
+        /// top-priority drainer so they work inside menus too.
         /// </summary>
         public static ModInputAction? Query() {
-            if (Input.GetKeyDown(KeyCode.K)) {
+            if (Input.GetKeyDown(KeyCode.S)) {
                 return ModInputAction.Of(ModInputKind.ReadHere);
-            }
-            if (Input.GetKeyDown(KeyCode.L)) {
-                return ModInputAction.Of(ModInputKind.Scan);
             }
             if (Input.GetKeyDown(KeyCode.Y)) {
                 return ModInputAction.Of(ModInputKind.ReadStatus);
@@ -228,43 +197,48 @@ namespace TangledeepAccess.Controls {
         }
 
         /// <summary>
-        /// Look-cursor control, consulted only while the cursor is active: Home recenters, arrows
-        /// and numpad step it (8-way, +x east +y north, mirroring the game's movement keys),
-        /// brackets jump between points of interest in view.
+        /// Exploration cursor control, consulted every frame (the cursor is always live). The
+        /// speculation ring around K steps the cursor 8-way (+x east, +y north):
+        /// <c>u i o / j l / m , .</c> map to NW N NE / W E / SW S SE. K reads the cursor's tile;
+        /// Alt+K toggles follow mode; Ctrl+K returns the cursor to the hero. These keys are all
+        /// unbound in the forced Default game layout, so claiming them shadows nothing.
         /// </summary>
-        public static ModInputAction? LookMove() {
-            if (Input.GetKeyDown(KeyCode.Home)) {
-                return ModInputAction.Of(ModInputKind.LookRecenter);
+        public static ModInputAction? CursorKeys() {
+            if (Input.GetKeyDown(KeyCode.K)) {
+                bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+                bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+                if (alt) {
+                    return ModInputAction.Of(ModInputKind.CursorFollowToggle);
+                }
+                if (ctrl) {
+                    return ModInputAction.Of(ModInputKind.CursorRecenter);
+                }
+                return ModInputAction.Of(ModInputKind.CursorRead);
             }
-            if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Keypad8)) {
-                return ModInputAction.Move(0, 1);
+
+            if (Input.GetKeyDown(KeyCode.U)) {
+                return ModInputAction.Move(-1, 1);   // NW
             }
-            if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.Keypad2)) {
-                return ModInputAction.Move(0, -1);
+            if (Input.GetKeyDown(KeyCode.I)) {
+                return ModInputAction.Move(0, 1);    // N
             }
-            if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.Keypad6)) {
-                return ModInputAction.Move(1, 0);
+            if (Input.GetKeyDown(KeyCode.O)) {
+                return ModInputAction.Move(1, 1);    // NE
             }
-            if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.Keypad4)) {
-                return ModInputAction.Move(-1, 0);
+            if (Input.GetKeyDown(KeyCode.J)) {
+                return ModInputAction.Move(-1, 0);   // W
             }
-            if (Input.GetKeyDown(KeyCode.Keypad9)) {
-                return ModInputAction.Move(1, 1);
+            if (Input.GetKeyDown(KeyCode.L)) {
+                return ModInputAction.Move(1, 0);    // E
             }
-            if (Input.GetKeyDown(KeyCode.Keypad7)) {
-                return ModInputAction.Move(-1, 1);
+            if (Input.GetKeyDown(KeyCode.M)) {
+                return ModInputAction.Move(-1, -1);  // SW
             }
-            if (Input.GetKeyDown(KeyCode.Keypad3)) {
-                return ModInputAction.Move(1, -1);
+            if (Input.GetKeyDown(KeyCode.Comma)) {
+                return ModInputAction.Move(0, -1);   // S
             }
-            if (Input.GetKeyDown(KeyCode.Keypad1)) {
-                return ModInputAction.Move(-1, -1);
-            }
-            if (Input.GetKeyDown(KeyCode.RightBracket)) {
-                return ModInputAction.Of(ModInputKind.LookNextPoi);
-            }
-            if (Input.GetKeyDown(KeyCode.LeftBracket)) {
-                return ModInputAction.Of(ModInputKind.LookPrevPoi);
+            if (Input.GetKeyDown(KeyCode.Period)) {
+                return ModInputAction.Move(1, -1);   // SE
             }
 
             return null;

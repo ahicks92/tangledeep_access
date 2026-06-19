@@ -12,21 +12,21 @@ namespace TangledeepAccess.Controls {
     /// policy that lives here.
     /// </summary>
     internal static class InputChain {
-        // ui → look → scanner → gameplay. The menu wins over the look cursor (a dialog opened
-        // mid-look still takes keys); the look cursor wins over free play (it owns its movement keys
-        // while active); the scanner is modeless and claims only its own dedicated nav keys, so its
-        // position relative to look/gameplay does not matter; free play is the floor (it claims only
-        // our query hotkeys, passing movement to the game). The hotbar drainer sits ABOVE this whole
-        // list (handled in RouteInGame before the capture check), since its keys must survive even
-        // an overlay that owns input.
+        // ui → cursor → scanner → gameplay. The menu wins over the exploration cursor (a dialog
+        // opened mid-look still takes keys); the cursor claims only its own dedicated keys (the
+        // speculation ring + read/follow/recenter), all game-unbound; the scanner is modeless and
+        // claims only its own dedicated nav keys, so its position relative to cursor/gameplay does
+        // not matter; free play is the floor (it claims only our query hotkeys, passing movement to
+        // the game). The hotbar drainer sits ABOVE this whole list (handled in RouteInGame before
+        // the capture check), since its keys must survive even an overlay that owns input.
         private static readonly InputDrainer[] InGame = {
             MenuInputDrainer.Instance,
-            LookInputDrainer.Instance,
+            ExplorationCursorInputDrainer.Instance,
             ScannerInputDrainer.Instance,
             GameplayInputDrainer.Instance,
         };
 
-        /// <summary>In-game pump: offer ui, then the look cursor, then free play.</summary>
+        /// <summary>In-game pump: offer ui, then the exploration cursor, then free play.</summary>
         public static bool RouteInGame() {
             // Top priority, always: the hotbar keys (cycle/read) work even while a full-screen overlay
             // owns input — so the player can flip to the page they want before assigning a skill in
@@ -40,10 +40,11 @@ namespace TangledeepAccess.Controls {
             // pump — so the key's auto-repeat can't leak to the game on the frames between our
             // key-down edges. Without this, the game's own TDInputHandler.UpdateInput runs on those
             // repeat frames and walks its parallel full-screen-UI cursor (playing its cursor sounds),
-            // and non-menu keys fall through to the other mod drainers (e.g. semicolon would toggle
-            // the look cursor from inside a menu). Keys the menu drainer does not claim still reach
-            // the GAME (so its own menu hotkeys — close, tab-switch, hotbar slotting — keep working),
-            // but the mod's free-play drainers (look cursor, scanner, gameplay queries) stay dormant.
+            // and non-menu keys fall through to the other mod drainers (e.g. a speculation key would
+            // step the exploration cursor from inside a menu). Keys the menu drainer does not claim
+            // still reach the GAME (so its own menu hotkeys — close, tab-switch, hotbar slotting —
+            // keep working), but the mod's free-play drainers (cursor, scanner, gameplay queries)
+            // stay dormant.
             if (UiRuntime.Dispatcher != null && UiRuntime.Dispatcher.CapturesInput) {
                 return !MenuInputDrainer.Instance.Claim(suppressWhileHeld: true);
             }

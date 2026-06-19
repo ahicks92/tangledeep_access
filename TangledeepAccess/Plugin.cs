@@ -155,6 +155,10 @@ namespace TangledeepAccess {
             // Queued, not interrupting, so it follows the turn's log lines.
             _speech?.Speak(MovementWatcher.PollOnMove(), interrupt: false);
 
+            // Keep the exploration cursor following the hero (when follow mode is on) and centered
+            // after a map change. Silent — cursor reads are on demand.
+            ExplorationCursor.SyncFollow();
+
             // Navigation aids. Per-step aids (wall echo) fire on each hero tile change; continuous
             // aids (the entity scanner) advance on their own clock via Tick. Pure audio through their
             // own AudioSources, independent of speech. Toggle/trigger on Shift/Ctrl + F keys.

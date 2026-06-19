@@ -2,13 +2,14 @@ using TangledeepAccess.Speech;
 
 namespace TangledeepAccess.Controls {
     /// <summary>
-    /// One feature's complete input story, co-located with the feature it serves (the look cursor
-    /// lives with <c>LookCursor</c>, free-play queries with <c>GameplayReader</c>, menus beside the
-    /// overlay dispatcher). A drainer has two halves that run at different times but read as one unit:
+    /// One feature's complete input story, co-located with the feature it serves (the exploration
+    /// cursor lives with <c>ExplorationCursor</c>, free-play queries with <c>GameplayReader</c>,
+    /// menus beside the overlay dispatcher). A drainer has two halves that run at different times but
+    /// read as one unit:
     ///
     /// <list type="bullet">
     /// <item><see cref="Claim"/> runs in the game's input hook. The hook offers each drainer the
-    /// frame in priority order (ui → look → gameplay); a drainer that does not apply or does not
+    /// frame in priority order (ui → cursor → gameplay); a drainer that does not apply or does not
     /// recognize the key returns false and the next is tried. The first to return true owns the
     /// frame — the hook suppresses the game's own input. Recognizing a key also enqueues it onto
     /// <see cref="InputQueue"/> tagged with <c>this</c>, so the pump knows who realizes it.</item>
