@@ -199,7 +199,8 @@ namespace TangledeepAccess.Controls {
         /// <summary>
         /// Exploration cursor control, consulted every frame (the cursor is always live). The
         /// speculation ring around K steps the cursor 8-way (+x east, +y north):
-        /// <c>u i o / j l / m , .</c> map to NW N NE / W E / SW S SE. K reads the cursor's tile;
+        /// <c>u i o / j l / m , .</c> map to NW N NE / W E / SW S SE. Holding Shift turns a ring key
+        /// into a skip (jump to the next terrain/shape change or occupant). K reads the cursor's tile;
         /// Alt+K toggles follow mode; Ctrl+K returns the cursor to the hero. These keys are all
         /// unbound in the forced Default game layout, so claiming them shadows nothing.
         /// </summary>
@@ -216,32 +217,40 @@ namespace TangledeepAccess.Controls {
                 return ModInputAction.Of(ModInputKind.CursorRead);
             }
 
+            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             if (Input.GetKeyDown(KeyCode.U)) {
-                return ModInputAction.Move(-1, 1);   // NW
+                return Ring(shift, -1, 1);   // NW
             }
             if (Input.GetKeyDown(KeyCode.I)) {
-                return ModInputAction.Move(0, 1);    // N
+                return Ring(shift, 0, 1);    // N
             }
             if (Input.GetKeyDown(KeyCode.O)) {
-                return ModInputAction.Move(1, 1);    // NE
+                return Ring(shift, 1, 1);    // NE
             }
             if (Input.GetKeyDown(KeyCode.J)) {
-                return ModInputAction.Move(-1, 0);   // W
+                return Ring(shift, -1, 0);   // W
             }
             if (Input.GetKeyDown(KeyCode.L)) {
-                return ModInputAction.Move(1, 0);    // E
+                return Ring(shift, 1, 0);    // E
             }
             if (Input.GetKeyDown(KeyCode.M)) {
-                return ModInputAction.Move(-1, -1);  // SW
+                return Ring(shift, -1, -1);  // SW
             }
             if (Input.GetKeyDown(KeyCode.Comma)) {
-                return ModInputAction.Move(0, -1);   // S
+                return Ring(shift, 0, -1);   // S
             }
             if (Input.GetKeyDown(KeyCode.Period)) {
-                return ModInputAction.Move(1, -1);   // SE
+                return Ring(shift, 1, -1);   // SE
             }
 
             return null;
+        }
+
+        // A ring key: a plain step, or a skip when Shift is held.
+        private static ModInputAction Ring(bool shift, int dx, int dy) {
+            return shift
+                ? new ModInputAction { Kind = ModInputKind.CursorSkip, Dx = dx, Dy = dy }
+                : ModInputAction.Move(dx, dy);
         }
     }
 }

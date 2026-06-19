@@ -36,6 +36,21 @@
         <PackageReference Include="Mono.CSharp" Version="4.0.0.143" />
     </ItemGroup>
 
+    <!-- Cursor audio cues, embedded into the single assembly (loaded via
+         Assembly.GetManifestResourceStream, decoded by Core/Audio/WavData). Authored under the
+         repo-root sounds/ folder; normalized to 44.1 kHz / 16-bit / stereo WAV. LogicalName pins a
+         stable resource name independent of the on-disk path. -->
+    <ItemGroup>
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\cursor_ground.wav"
+            LogicalName="TangledeepAccess.Sounds.cursor_ground.wav" />
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\cursor_impassable.wav"
+            LogicalName="TangledeepAccess.Sounds.cursor_impassable.wav" />
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\cursor_entity.wav"
+            LogicalName="TangledeepAccess.Sounds.cursor_entity.wav" />
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\cursor_skipped.wav"
+            LogicalName="TangledeepAccess.Sounds.cursor_skipped.wav" />
+    </ItemGroup>
+
     <!-- Generate the Plugin.PluginVersion constant from <Version> (Directory.Build.props)
        so the BepInPlugin attribute, which needs a compile-time literal, has one source
        of truth. The file lands under obj\, excluded from the default Compile glob; the

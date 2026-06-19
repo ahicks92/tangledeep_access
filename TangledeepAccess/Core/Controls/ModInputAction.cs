@@ -66,9 +66,11 @@ namespace TangledeepAccess.Controls {
         NavAidToggle,
         NavAidTrigger,
 
-        // Exploration cursor control (free play). Move steps the cursor (the speculation ring);
-        // these are its read/follow/recenter verbs.
+        // Exploration cursor control (free play). Move steps the cursor (the speculation ring),
+        // CursorSkip (Shift+ring) skips to the next terrain/shape change or occupant; the rest are
+        // its read/follow/recenter verbs.
         CursorRead,
+        CursorSkip,
         CursorFollowToggle,
         CursorRecenter,
 

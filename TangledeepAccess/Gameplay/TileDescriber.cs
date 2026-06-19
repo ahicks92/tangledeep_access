@@ -23,23 +23,34 @@ namespace TangledeepAccess.Gameplay {
                 return;
             }
 
-            // GetHoverText returns the actor/feature on the tile, but for an item-only tile it
-            // returns the item's name — which AppendItems would then repeat. So when the hover
-            // is just one of the ground items, fall back to terrain and let AppendItems name the
-            // item once. A real monster/NPC/feature (hover not matching any item) is spoken.
-            string actor = includeActor ? GameLabelReader.Clean(HoverInfoScript.GetHoverText(tile)) : null;
-            if (actor != null && !IsGroundItemName(tile, actor)) {
-                message.Fragment(actor);
-            } else {
-                // No hover actor: a blocking object the game doesn't hover (a building/prop
-                // destructible like Nando's kitchen) still occupies the tile and matters to a
-                // player who can't see it, so name it instead of the terrain beneath it. Falls
-                // through to terrain when the tile is bare.
-                string obj = includeActor ? BlockingObjectName(tile) : null;
-                message.Fragment(obj ?? Terrain(tile));
+            string occupant = includeActor ? Occupant(tile) : null;
+            message.Fragment(occupant ?? Terrain(tile));
+            AppendItems(message, tile);
+        }
+
+        /// <summary>
+        /// The actor/feature/blocking object occupying a tile (the name to speak), or null for bare
+        /// terrain. Prefers the game's hover text (monster/NPC/feature), but when that is empty or is
+        /// merely one of the ground items, falls back to a collidable destructible the hover ignores
+        /// (a building/prop). Used both to name the occupant and to decide whether the entity cue
+        /// should sound.
+        /// </summary>
+        public static string Occupant(MapTileData tile) {
+            if (tile == null) {
+                return null;
             }
 
-            AppendItems(message, tile);
+            // GetHoverText returns the actor/feature on the tile, but for an item-only tile it
+            // returns the item's name — which AppendItems would then repeat — so treat that as no
+            // occupant and let AppendItems name the item once.
+            string actor = GameLabelReader.Clean(HoverInfoScript.GetHoverText(tile));
+            if (actor != null && !IsGroundItemName(tile, actor)) {
+                return actor;
+            }
+
+            // A blocking object the game doesn't hover (a building/prop destructible like Nando's
+            // kitchen) still occupies the tile and matters to a player who can't see it.
+            return BlockingObjectName(tile);
         }
 
         // A collidable object the game's hover text ignores — chiefly non-targetable destructibles
@@ -123,7 +134,7 @@ namespace TangledeepAccess.Gameplay {
                 || tile.CheckTag(LocationTags.LASER);
         }
 
-        private static void AppendItems(MessageBuilder message, MapTileData tile) {
+        internal static void AppendItems(MessageBuilder message, MapTileData tile) {
             List<Item> items = tile.GetItemsInTile();
             if (items == null) {
                 return;

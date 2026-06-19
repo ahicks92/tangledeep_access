@@ -52,6 +52,25 @@ namespace TangledeepAccess.Audio {
             var clip = AudioClip.Create("tone", pcm.Length / 2, 2, sampleRate, false);
             clip.SetData(pcm, 0);
             voice.Stop();
+            voice.volume = 1f; // synth bakes amplitude into the buffer; clear any prior PlayClip volume
+            voice.clip = clip;
+            voice.Play();
+        }
+
+        /// <summary>
+        /// Play a pre-built (typically cached) clip at <paramref name="volume"/> on a pooled voice.
+        /// Unlike <see cref="PlayStereo"/> this allocates nothing per call — the caller owns the clip
+        /// — so it suits cues fired often (e.g. one per cursor step).
+        /// </summary>
+        public static void PlayClip(AudioClip clip, float volume) {
+            if (clip == null) {
+                return;
+            }
+
+            AudioSource voice = Pool()[_next];
+            _next = (_next + 1) % Voices;
+            voice.Stop();
+            voice.volume = volume;
             voice.clip = clip;
             voice.Play();
         }

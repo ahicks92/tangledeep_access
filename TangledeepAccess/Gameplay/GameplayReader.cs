@@ -76,8 +76,9 @@ namespace TangledeepAccess.Gameplay {
                 return message.Fragment(
                     "Tangledeep Access commands. S, read your tile and surroundings. Y, status. "
                     + "The exploration cursor: K reads the cursor's tile; U I O, J L, M comma period "
-                    + "move it in eight directions; Alt K toggles whether it follows you, on by "
-                    + "default; Ctrl K returns it to you. "
+                    + "move it in eight directions; hold shift to skip to the next terrain change or "
+                    + "creature; Alt K toggles whether it follows you, on by default; Ctrl K returns "
+                    + "it to you. "
                     + "Backtick, cycle hotbar and read it. "
                     + "Page up and page down, step scanner entries; control plus page up or down, "
                     + "step scanner categories. "
