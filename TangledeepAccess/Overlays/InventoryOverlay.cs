@@ -15,8 +15,8 @@ namespace TangledeepAccess.Overlays {
     /// <list type="bullet">
     /// <item>a <b>sort</b> row — an anchor reading the current sort and item count, then a sort
     /// button per sort type;</item>
-    /// <item>one <b>item</b> row per consumable — the item (confirm reads its full tooltip) then
-    /// its action cells.</item>
+    /// <item>one <b>item</b> row per consumable — the item (confirm uses/eats it, read-info reads
+    /// its full tooltip) then its action cells.</item>
     /// </list>
     ///
     /// <para>The hero's HP/resources/JP/XP/gold are deliberately NOT here: they are persistent
@@ -27,12 +27,13 @@ namespace TangledeepAccess.Overlays {
     /// scrolling. Read live each build; never cached.</para>
     ///
     /// <para><b>Navigation:</b> rows do NOT share keys, so up/down always lands on the next row's
-    /// first cell — the item — announcing it; left/right steps through that item's actions. We do
-    /// not share row keys for column nav because the builder cannot yet label transitions, so a
-    /// column of identical action cells would read "drop, drop, drop" with no item context. Action
-    /// cells are still keyed by the item's <c>actorUniqueID</c> (the builder rejects duplicate ids).</para>
+    /// first cell — its naming cell (the sort anchor, or the item) — announcing it; left/right steps
+    /// through that row's contents (an item's actions). We do not share row keys for column nav
+    /// because the builder cannot yet label transitions, so a column of identical action cells would
+    /// read "drop, drop, drop" with no item context. Action cells are still keyed by the item's
+    /// <c>actorUniqueID</c> (the builder rejects duplicate ids).</para>
     ///
-    /// <para><b>Scope:</b> stats and item identity/info, favorite/trash (Enter on the cell or the
+    /// <para><b>Scope:</b> item identity/info, favorite/trash (Enter on the cell or the
     /// row-wide F / Minus keys), sort buttons, use/eat, and single-item drop all work. Two gaps
     /// remain: dropping part of a <i>stack</i> needs the quantity-slider dialog we do not handle yet
     /// (gated with a spoken notice), and using a <i>targeted</i> item hands off to the game's
