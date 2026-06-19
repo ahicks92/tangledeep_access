@@ -13,12 +13,14 @@ namespace TangledeepAccess.Overlays {
     /// tick:
     ///
     /// <list type="bullet">
-    /// <item>a <b>stats</b> row — character summary then each resource;</item>
     /// <item>a <b>sort</b> row — an anchor reading the current sort and item count, then a sort
     /// button per sort type;</item>
     /// <item>one <b>item</b> row per consumable — the item (confirm reads its full tooltip) then
     /// its action cells.</item>
     /// </list>
+    ///
+    /// <para>The hero's HP/resources/JP/XP/gold are deliberately NOT here: they are persistent
+    /// PlayerHUD chrome shown on every screen, not part of the inventory's own UI.</para>
     ///
     /// <para><b>Data source:</b> the screen's own <c>itemColumn.listHeldObjects</c> — the complete
     /// filtered+sorted list (not the 16-wide visible window), so we read every item without
@@ -82,42 +84,8 @@ namespace TangledeepAccess.Overlays {
             List<ISelectableUIObject> items =
                 screen.itemColumn != null ? HeldObjects(screen.itemColumn) : null;
 
-            BuildStatsRow(builder);
             BuildSortRow(builder, items);
             BuildItemRows(builder, items);
-        }
-
-        // --- Stats row -------------------------------------------------------------------------
-
-        private static void BuildStatsRow(IOverlayBuilder builder) {
-            HeroPC hero = GameMasterScript.heroPCActor;
-            StatBlock stats = hero.myStats;
-
-            builder.StartRow("stats");
-
-            builder.AddLabel(
-                ControlId.Structural("inv:stat:hero"),
-                ctx => ctx.Message
-                    .Fragment(GameLabelReader.Clean(hero.displayName))
-                    .ListItem("level " + stats.GetLevel())
-            );
-            builder.AddLabel(ControlId.Structural("inv:stat:hp"), ctx => Bar(ctx.Message, stats, StatTypes.HEALTH, "health"));
-            builder.AddLabel(ControlId.Structural("inv:stat:stamina"), ctx => Bar(ctx.Message, stats, StatTypes.STAMINA, "stamina"));
-            builder.AddLabel(ControlId.Structural("inv:stat:energy"), ctx => Bar(ctx.Message, stats, StatTypes.ENERGY, "energy"));
-            builder.AddLabel(ControlId.Structural("inv:stat:gold"), ctx => ctx.Message.Fragment(hero.GetMoney() + " gold"));
-            builder.AddLabel(ControlId.Structural("inv:stat:jp"), ctx => ctx.Message.Fragment(ModStrings.Jp((int)hero.GetCurJP())));
-            builder.AddLabel(
-                ControlId.Structural("inv:stat:xp"),
-                ctx => ctx.Message.PushFraction(stats.GetXP(), stats.GetXPToNextLevel(), "experience to next level")
-            );
-
-            builder.EndRow();
-        }
-
-        private static void Bar(MessageBuilder message, StatBlock stats, StatTypes stat, string unit) {
-            int cur = (int)stats.GetStat(stat, StatDataTypes.CUR);
-            int max = (int)stats.GetStat(stat, StatDataTypes.MAX);
-            message.PushFraction(cur, max, unit);
         }
 
         // --- Sort row --------------------------------------------------------------------------
