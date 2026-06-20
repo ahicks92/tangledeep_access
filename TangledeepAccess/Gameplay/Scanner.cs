@@ -8,17 +8,20 @@ using UnityEngine;
 namespace TangledeepAccess.Gameplay {
     /// <summary>
     /// The broad buckets the scanner sorts map features into — the top axis of navigation
-    /// ("what kind of thing, in general?"). <see cref="All"/> is the catch-all spanning every other
-    /// bucket and is the default selection. The rest are coarse on purpose: the boundaries are a first
-    /// guess pending real UX, and <see cref="Scanner.Categorize"/> is a single switch that is trivial
-    /// to re-cut (e.g. splitting shops out of <see cref="Services"/> on <c>NPC.shopRef</c>). The order
-    /// here is not the iteration order — that is <see cref="Scanner.Order"/> — and <see cref="Other"/>
-    /// is the catch-all for actor types we do not model, surfaced so the scan misses nothing.
-    /// <see cref="Terrain"/> is special: its members are not single actors but clustered regions of
-    /// terrain tiles (water, mud, ...) built by <see cref="TerrainClusterer"/>.
+    /// ("what kind of thing, in general?"). Two of these are not real buckets but views spanning every
+    /// other bucket: <see cref="Visible"/> (only features in current line of sight) is the default
+    /// selection and leads the iteration order; <see cref="All"/> (every explored feature) is the
+    /// catch-all and trails it. The rest are coarse on purpose: the boundaries are a first guess pending
+    /// real UX, and <see cref="Scanner.Categorize"/> is a single switch that is trivial to re-cut (e.g.
+    /// splitting shops out of <see cref="Services"/> on <c>NPC.shopRef</c>). The order here is not the
+    /// iteration order — that is <see cref="Scanner.Order"/> — and <see cref="Other"/> is the catch-all
+    /// for actor types we do not model, surfaced so the scan misses nothing. <see cref="Terrain"/> is
+    /// special: its members are not single actors but clustered regions of terrain tiles (water,
+    /// mud, ...) built by <see cref="TerrainClusterer"/>.
     /// </summary>
     public enum ScanCategory {
         All,
+        Visible,
         Monsters,
         Items,
         Services,
@@ -78,10 +81,13 @@ namespace TangledeepAccess.Gameplay {
                 name = a.actorRefName; // e.g. stairs carry no displayName
             }
 
+            // Reuse the cursor's short occupant form, injecting the hero-relative offset right after
+            // the name — so a monster reads "rat, 2 right 3 down, 80% hp, aggressive" and everything
+            // else reads "name, <offset>".
             Vector2 p = a.GetPos();
             Vector2 hp = hero.GetPos();
-            message.Fragment(name);
-            message.PushRelativeCoordinates(new Vector2((int)p.x - (int)hp.x, (int)p.y - (int)hp.y));
+            var offset = new Vector2((int)p.x - (int)hp.x, (int)p.y - (int)hp.y);
+            TileDescriber.AppendShortForm(message, a, name, offset);
         }
     }
 
@@ -116,9 +122,10 @@ namespace TangledeepAccess.Gameplay {
     /// <summary>
     /// Input for the scanner, beside the state it drives — the same drainer+module split as the look
     /// cursor. Modeless: it claims only its dedicated nav keys (Page Up/Down for entries, Ctrl+Page
-    /// Up/Down for categories, Home to point the cursor, End to rescan) and passes everything else
-    /// straight through, so it never fights the look cursor's arrows or the game's movement. The keys
-    /// carry no payload; <see cref="Scanner"/> holds the selection and produces the speech.
+    /// Up/Down for categories, Home to point the cursor, Shift+Home to examine the selection, Alt+Home
+    /// to toggle auto-jump, End to rescan) and passes everything else straight through, so it never
+    /// fights the look cursor's arrows or the game's movement. The keys carry no payload;
+    /// <see cref="Scanner"/> holds the selection and produces the speech.
     /// </summary>
     public sealed class ScannerInputDrainer : InputDrainer {
         public static readonly ScannerInputDrainer Instance = new ScannerInputDrainer();
@@ -153,6 +160,12 @@ namespace TangledeepAccess.Gameplay {
                 case ModInputKind.ScanGoto:
                     spoken = Scanner.Goto();
                     break;
+                case ModInputKind.ScanExamine:
+                    spoken = Scanner.Examine();
+                    break;
+                case ModInputKind.ScanAutoJumpToggle:
+                    spoken = Scanner.ToggleAutoJump();
+                    break;
                 case ModInputKind.ScanRescan:
                     spoken = Scanner.Rescan();
                     break;
@@ -181,20 +194,27 @@ namespace TangledeepAccess.Gameplay {
     /// Manhattan distance from the hero to the feature's nearest point at rescan, ties broken by that
     /// point's x then y.</para>
     ///
-    /// <para>Two navigation axes: category (the broad bucket, defaulting to <see cref="ScanCategory.All"/>)
-    /// and entry (one feature within it, nearest first). Category navigation just re-filters the held
-    /// snapshot — it does not rebuild. <see cref="Goto"/> (Home) points the exploration cursor at the
-    /// selected feature's nearest point and speaks the cursor's own readout.</para>
+    /// <para>Two navigation axes: category (the broad bucket, defaulting to
+    /// <see cref="ScanCategory.Visible"/> — only features in current line of sight) and entry (one
+    /// feature within it, nearest first). Category navigation just re-filters the held snapshot — it
+    /// does not rebuild. <see cref="Goto"/> (Home) points the exploration cursor at the selected
+    /// feature's nearest point and speaks the cursor's own readout; <see cref="Examine"/> (Shift+Home)
+    /// reads its full tooltip; <see cref="ToggleAutoJump"/> (Alt+Home) flips a mode where navigation
+    /// itself points the cursor as you go.</para>
     ///
-    /// <para>Visibility follows the minimap, not line of sight: a feature is surfaced only on an
-    /// <em>explored</em> tile (<see cref="Visibility.Explored"/>), and terrain is clustered only over
-    /// explored tiles, so the scanner never reveals ground the player has not yet seen.</para>
+    /// <para>Visibility follows the minimap, not line of sight: the snapshot surfaces a feature only on
+    /// an <em>explored</em> tile (<see cref="Visibility.Explored"/>), and terrain is clustered only over
+    /// explored tiles, so the scanner never reveals ground the player has not yet seen. The
+    /// <see cref="ScanCategory.Visible"/> view narrows that explored snapshot to what the hero can see
+    /// right now (<see cref="Visibility.VisibleNow"/>); <see cref="ScanCategory.All"/> spans all of
+    /// it.</para>
     /// </summary>
     internal static class Scanner {
-        // Iteration order for category navigation. All leads (the default); Other trails as the
-        // catch-all for unmodeled actor types. This order is arbitrary and easy to change.
+        // Iteration order for category navigation. Visible leads (the default — only what is in sight);
+        // All trails as the everything-explored catch-all, with Other just ahead of it for unmodeled
+        // actor types. This order is arbitrary and easy to change.
         private static readonly ScanCategory[] Order = {
-            ScanCategory.All,
+            ScanCategory.Visible,
             ScanCategory.Monsters,
             ScanCategory.Stairs,
             ScanCategory.Services,
@@ -202,6 +222,7 @@ namespace TangledeepAccess.Gameplay {
             ScanCategory.Objects,
             ScanCategory.Terrain,
             ScanCategory.Other,
+            ScanCategory.All,
         };
 
         // The held snapshot (null = never scanned yet) and the map it was taken on, so a level change
@@ -210,15 +231,24 @@ namespace TangledeepAccess.Gameplay {
         private static List<ScanFeature> _snapshot;
         private static Map _snapshotMap;
 
-        private static ScanCategory _category = ScanCategory.All;
+        // The default view, restored on first scan and whenever a rescan empties the current category.
+        private const ScanCategory DefaultCategory = ScanCategory.Visible;
+
+        private static ScanCategory _category = DefaultCategory;
         private static ScanFeature _selected; // the current entry, by reference within the snapshot
+
+        // Auto-jump mode (Alt+Home toggles it): while on, every category/entry step also points the
+        // exploration cursor at the selected feature, playing its tile cues — the spoken text stays the
+        // scanner's own reading, the cursor just follows along.
+        private static bool _autoJump;
 
         /// <summary>
         /// Which category a map feature belongs to — the requested classifier. Coarse and keyed only
         /// on <see cref="ActorTypes"/> for v1; the hero and terrain tiles are excluded before this is
         /// called, so it never returns a category for the player or for terrain. Never returns
-        /// <see cref="ScanCategory.All"/> (a view spanning the others) or <see cref="ScanCategory.Terrain"/>
-        /// (handled by clustering). Splitting shops out of services is a one-line change.
+        /// <see cref="ScanCategory.All"/> or <see cref="ScanCategory.Visible"/> (views spanning the
+        /// others) or <see cref="ScanCategory.Terrain"/> (handled by clustering). Splitting shops out
+        /// of services is a one-line change.
         /// </summary>
         public static ScanCategory Categorize(Actor a) {
             switch (a.GetActorType()) {
@@ -263,7 +293,7 @@ namespace TangledeepAccess.Gameplay {
             _snapshot = null;
             _snapshotMap = null;
             _selected = null;
-            _category = ScanCategory.All;
+            _category = DefaultCategory;
         }
 
         // --- Navigation ---
@@ -295,6 +325,7 @@ namespace TangledeepAccess.Gameplay {
                 _category = cat;
                 _selected = view[0];
                 SpeakCategory(message, cat, view, 0);
+                AutoJump(hero);
                 return message;
             }
 
@@ -327,7 +358,16 @@ namespace TangledeepAccess.Gameplay {
                 : (cur + dir + view.Count) % view.Count;
             _selected = view[next];
             SpeakEntry(message, view[next], next, view.Count);
+            AutoJump(hero);
             return message;
+        }
+
+        // In auto-jump mode, point the exploration cursor at the just-selected feature, playing its
+        // tile cues but speaking nothing — the navigation's own scanner reading is the spoken text.
+        private static void AutoJump(HeroPC hero) {
+            if (_autoJump && _selected != null) {
+                ExplorationCursor.JumpToSilent(_selected.NearestPointTo(hero.GetPos()));
+            }
         }
 
         /// <summary>
@@ -351,6 +391,48 @@ namespace TangledeepAccess.Gameplay {
             }
 
             return ExplorationCursor.JumpTo(_selected.NearestPointTo(hero.GetPos()));
+        }
+
+        /// <summary>
+        /// Examine the selected feature in full (Shift+Home): the game's own tooltip at the feature's
+        /// nearest point — full monster stats, or terrain plus its hazard effect — without moving the
+        /// cursor. Mirrors the exploration cursor's Shift+K examine.
+        /// </summary>
+        public static MessageBuilder Examine() {
+            HeroPC hero = GameMasterScript.heroPCActor;
+            Map map = MapMasterScript.activeMap;
+            if (hero == null || map == null) {
+                return null;
+            }
+
+            if (!EnsureSnapshot(hero)) {
+                return new MessageBuilder().Fragment("nothing in range");
+            }
+
+            if (_selected == null || !_snapshot.Contains(_selected)) {
+                return new MessageBuilder().Fragment("nothing selected");
+            }
+
+            return ExplorationCursor.ExamineAt(_selected.NearestPointTo(hero.GetPos()));
+        }
+
+        /// <summary>
+        /// Toggle auto-jump mode (Alt+Home): while on, every category/entry step also points the
+        /// exploration cursor at the selected feature (cues only — the spoken text stays the scanner's
+        /// reading). Turning it on jumps to the current selection at once.
+        /// </summary>
+        public static MessageBuilder ToggleAutoJump() {
+            _autoJump = !_autoJump;
+            var message = new MessageBuilder();
+            message.Fragment(_autoJump ? "auto jump on" : "auto jump off");
+            if (_autoJump) {
+                HeroPC hero = GameMasterScript.heroPCActor;
+                if (hero != null) {
+                    AutoJump(hero);
+                }
+            }
+
+            return message;
         }
 
         /// <summary>
@@ -392,8 +474,15 @@ namespace TangledeepAccess.Gameplay {
         private static void DoRescan(HeroPC hero) {
             _snapshot = BuildSnapshot(hero);
             _snapshotMap = MapMasterScript.activeMap;
-            _category = ScanCategory.All;
-            _selected = _snapshot.Count > 0 ? _snapshot[0] : null;
+            // Keep the current category across a rescan — only fall back to the default when the rescan
+            // left it with no live entries (so a refresh on the same floor doesn't yank you off
+            // "Monsters" just because they moved, but does rescue you off an emptied bucket).
+            List<ScanFeature> view = View(_category, LiveIds());
+            if (view.Count == 0) {
+                _category = DefaultCategory;
+                view = View(_category, LiveIds());
+            }
+            _selected = view.Count > 0 ? view[0] : null;
         }
 
         private static List<ScanFeature> BuildSnapshot(HeroPC hero) {
@@ -469,14 +558,27 @@ namespace TangledeepAccess.Gameplay {
         }
 
         // The navigable entries of a category, in snapshot order: those of the category (All spans
-        // every category) that are still present. Filtering against the live set means stepping never
-        // lands on a "gone" actor. Home is the exception: it keeps its existing selection.
+        // every category; Visible spans every category but keeps only features in current line of
+        // sight) that are still present. Filtering against the live set means stepping never lands on a
+        // "gone" actor. Home is the exception: it keeps its existing selection.
         private static List<ScanFeature> View(ScanCategory cat, HashSet<int> live) {
+            Vector2 hero = GameMasterScript.heroPCActor != null
+                ? GameMasterScript.heroPCActor.GetPos()
+                : Vector2.zero;
             var view = new List<ScanFeature>();
             foreach (ScanFeature f in _snapshot) {
-                if (f.IsPresent(live) && (cat == ScanCategory.All || f.Category == cat)) {
-                    view.Add(f);
+                if (!f.IsPresent(live)) {
+                    continue;
                 }
+                if (cat == ScanCategory.Visible) {
+                    if (!Visibility.VisibleNow(f.NearestPointTo(hero))) {
+                        continue; // the explored snapshot, narrowed to what the hero can see right now
+                    }
+                } else if (cat != ScanCategory.All && f.Category != cat) {
+                    continue;
+                }
+
+                view.Add(f);
             }
 
             return view;
@@ -521,6 +623,8 @@ namespace TangledeepAccess.Gameplay {
             switch (cat) {
                 case ScanCategory.All:
                     return "All";
+                case ScanCategory.Visible:
+                    return "Visible";
                 case ScanCategory.Monsters:
                     return "Monsters";
                 case ScanCategory.Items:

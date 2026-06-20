@@ -194,14 +194,23 @@ namespace TangledeepAccess.Controls {
         /// Scanner navigation, the scanner drainer's set — Factorio Access's Page Up/Down family:
         /// plain Page Up/Down step between entries (Factorio's subcategory axis), Ctrl + Page Up/Down
         /// step between categories. Home points the exploration cursor at the selected feature (its
-        /// readout follows); End rescans — re-snapshots the list. Shift + Page Up/Down is Factorio's
-        /// instance axis, which we have not built yet, so we leave it unclaimed (pass through) for now
-        /// rather than swallow it. The game binds Page Up/Down only to in-list paging and leaves
-        /// Home/End unbound, so claiming them shadows nothing in free play. Modeless: the scanner keeps
-        /// its selection between presses.
+        /// readout follows); Shift + Home examines the selected feature (its full tooltip); Alt + Home
+        /// toggles auto-jump (navigation then points the cursor as you go, cues only). End rescans —
+        /// re-snapshots the list. Shift + Page Up/Down is Factorio's instance axis, which we have not
+        /// built yet, so we leave it unclaimed (pass through) for now rather than swallow it. The game
+        /// binds Page Up/Down only to in-list paging and leaves Home/End unbound, so claiming them
+        /// shadows nothing in free play. Modeless: the scanner keeps its selection between presses.
         /// </summary>
         public static ModInputAction? ScannerNav() {
             if (Input.GetKeyDown(KeyCode.Home)) {
+                bool altHome = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+                bool shiftHome = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                if (altHome) {
+                    return ModInputAction.Of(ModInputKind.ScanAutoJumpToggle);
+                }
+                if (shiftHome) {
+                    return ModInputAction.Of(ModInputKind.ScanExamine);
+                }
                 return ModInputAction.Of(ModInputKind.ScanGoto);
             }
             if (Input.GetKeyDown(KeyCode.End)) {

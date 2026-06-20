@@ -46,12 +46,43 @@ namespace TangledeepAccess.Gameplay {
             string actor = GameLabelReader.Clean(HoverInfoScript.GetHoverText(tile));
             Actor described = HoverInfoScript.currentHoveredActor;
             if (actor != null && !IsGroundItemName(tile, actor) && !TerrainFeature.Is(described)) {
-                return ShortForm(described, actor);
+                var message = new MessageBuilder();
+                AppendShortForm(message, described, ShortFormName(described, actor));
+                return message.Build();
             }
 
             // A blocking object the game doesn't hover (a building/prop destructible like Nando's
             // kitchen) still occupies the tile and matters to a player who can't see it.
             return BlockingObjectName(tile);
+        }
+
+        /// <summary>
+        /// Append an actor's short spoken form into <paramref name="message"/> as comma-separated
+        /// items: the name, then (when <paramref name="offset"/> is given) the hero-relative offset,
+        /// then for a monster its HP% and attitude. The shared seam behind the cursor's occupant read
+        /// (no offset — "rat, 80% hp, aggressive") and the scanner's entry read, which injects
+        /// coordinates after the name ("rat, 2 right 3 down, 80% hp, aggressive").
+        /// </summary>
+        public static void AppendShortForm(MessageBuilder message, Actor described, string name, Vector2? offset = null) {
+            message.ListItem(name);
+            if (offset.HasValue) {
+                message.ListItem();
+                message.PushRelativeCoordinates(offset.Value);
+            }
+            if (described is Monster mn) {
+                int hpPct = (int)(mn.myStats.GetCurStatAsPercentOfMax(StatTypes.HEALTH) * 100f);
+                message.ListItem(hpPct + "% hp").ListItem(Attitude(mn));
+            }
+        }
+
+        // The leading name for the short form: a monster uses its own display name (the hover text
+        // carries extra stats we re-derive), everything else keeps its already-short hover name.
+        private static string ShortFormName(Actor described, string hoverName) {
+            if (described is Monster mn) {
+                return GameLabelReader.Clean(mn.displayName) ?? mn.actorRefName;
+            }
+
+            return hoverName;
         }
 
         /// <summary>
@@ -71,18 +102,6 @@ namespace TangledeepAccess.Gameplay {
             }
 
             return BlockingObjectName(tile);
-        }
-
-        // The terse occupant string. A monster collapses to name + HP% + attitude; anything else keeps
-        // its (already short) hover name.
-        private static string ShortForm(Actor described, string hoverName) {
-            if (described is Monster mn) {
-                string name = GameLabelReader.Clean(mn.displayName) ?? mn.actorRefName;
-                int hpPct = (int)(mn.myStats.GetCurStatAsPercentOfMax(StatTypes.HEALTH) * 100f);
-                return name + ", " + hpPct + "% hp, " + Attitude(mn);
-            }
-
-            return hoverName;
         }
 
         // The monster's stance toward the hero, mirroring the game's own examine wording.

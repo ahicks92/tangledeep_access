@@ -86,15 +86,18 @@ namespace TangledeepAccess.Controls {
         CursorRecenter,
 
         // Scanner: navigating the categorized, distance-sorted map readout. Two axes —
-        // category (the broad bucket, with an "all" bucket spanning every feature) and entry
-        // (one feature within it). Modeless: the scanner keeps its selection between presses,
-        // no toggle. The list is a snapshot rebuilt only on ScanRescan; ScanGoto points the
-        // exploration cursor at the selected feature.
+        // category (the broad bucket, with "visible" and "all" buckets spanning every feature)
+        // and entry (one feature within it). Modeless: the scanner keeps its selection between
+        // presses, no toggle. The list is a snapshot rebuilt only on ScanRescan; ScanGoto points
+        // the exploration cursor at the selected feature, ScanExamine reads its full tooltip, and
+        // ScanAutoJumpToggle flips a mode where navigation auto-points the cursor (cues only).
         ScanNextCategory,
         ScanPrevCategory,
         ScanNextEntry,
         ScanPrevEntry,
         ScanGoto,
+        ScanExamine,
+        ScanAutoJumpToggle,
         ScanRescan,
     }
 

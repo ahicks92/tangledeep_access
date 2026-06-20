@@ -234,16 +234,32 @@ namespace TangledeepAccess.Gameplay {
                 return null;
             }
 
+            return ExamineAt(new Vector2(_x, _y));
+        }
+
+        /// <summary>
+        /// Examine an arbitrary tile in full — the shared body behind <see cref="ExamineCursor"/> and
+        /// the scanner's Shift+Home examine. Coordinates (hero-relative) lead; a blurred tile is tagged;
+        /// an unexplored tile reads "unexplored". Does not move the cursor.
+        /// </summary>
+        public static MessageBuilder ExamineAt(Vector2 pos) {
+            HeroPC hero = GameMasterScript.heroPCActor;
+            Map map = MapMasterScript.activeMap;
+            if (hero == null || map == null) {
+                return null;
+            }
+
+            int x = (int)pos.x;
+            int y = (int)pos.y;
             var message = new MessageBuilder();
-            var pos = new Vector2(_x, _y);
             message.PushRelativeCoordinates(pos - hero.GetPos());
             message.ListItem();
 
-            if (!Visibility.Explored(_x, _y)) {
+            if (!Visibility.Explored(x, y)) {
                 message.Fragment("unexplored");
                 return message;
             }
-            if (Visibility.Blurred(_x, _y)) {
+            if (Visibility.Blurred(x, y)) {
                 message.Fragment("blurred");
             }
 
@@ -300,6 +316,23 @@ namespace TangledeepAccess.Gameplay {
             var message = new MessageBuilder();
             AppendRead(message, differential: false, withCoords: false, playCues: true);
             return message;
+        }
+
+        /// <summary>
+        /// Position the cursor at <paramref name="target"/> and play its tile cues, but speak nothing —
+        /// the scanner's auto-jump mode, where the spoken text is the scanner's own reading and the
+        /// cursor just follows along audibly. Resets the differential baseline so a later manual step
+        /// diffs against the landed tile, not the one before the jump. Follow is left unchanged.
+        /// </summary>
+        public static void JumpToSilent(Vector2 target) {
+            Map map = MapMasterScript.activeMap;
+            if (GameMasterScript.heroPCActor == null || map == null) {
+                return;
+            }
+
+            _x = Mathf.Clamp((int)target.x, 0, map.columns - 1);
+            _y = Mathf.Clamp((int)target.y, 0, map.rows - 1);
+            AppendRead(new MessageBuilder(), differential: false, withCoords: false, playCues: true);
         }
 
         // Append the current tile's read into the message, and play its cues unless suppressed.
