@@ -58,21 +58,38 @@ namespace TangledeepAccess.Controls {
             public readonly KeyCode? TargetKey;
             public readonly ModifierKeyFlags TargetMod;
 
-            private KeyEvac(KeyCode sourceKey, ModifierKeyFlags sourceMod, KeyCode? targetKey, ModifierKeyFlags targetMod) {
+            /// <summary>When set, relocate only this one game action (by name) and <i>own</i> the
+            /// target combo; null means the legacy "move/clear every action on the source key".</summary>
+            public readonly string Action;
+
+            private KeyEvac(KeyCode sourceKey, ModifierKeyFlags sourceMod, KeyCode? targetKey, ModifierKeyFlags targetMod, string action) {
                 SourceKey = sourceKey;
                 SourceMod = sourceMod;
                 TargetKey = targetKey;
                 TargetMod = targetMod;
+                Action = action;
             }
 
             /// <summary>Clear a key, discarding whatever the game bound to it.</summary>
             public static KeyEvac Delete(KeyCode sourceKey, ModifierKeyFlags sourceMod = ModifierKeyFlags.None) {
-                return new KeyEvac(sourceKey, sourceMod, null, default);
+                return new KeyEvac(sourceKey, sourceMod, null, default, null);
             }
 
             /// <summary>Clear a key, relocating every action on it onto <paramref name="targetKey"/>.</summary>
             public static KeyEvac MoveTo(KeyCode sourceKey, KeyCode targetKey, ModifierKeyFlags targetMod = ModifierKeyFlags.None, ModifierKeyFlags sourceMod = ModifierKeyFlags.None) {
-                return new KeyEvac(sourceKey, sourceMod, targetKey, targetMod);
+                return new KeyEvac(sourceKey, sourceMod, targetKey, targetMod, null);
+            }
+
+            /// <summary>
+            /// Relocate a <b>single named</b> game action from <paramref name="sourceKey"/> onto
+            /// <paramref name="targetKey"/>+<paramref name="targetMod"/>, and make that target combo
+            /// host <i>exactly</i> that action. Use when the source key is also needed for something
+            /// else (e.g. it is a movement-mirror target): only the named action leaves the source, and
+            /// the target is cleared first so stray bindings that accumulated there (across sessions —
+            /// Rewired persists the map) are scrubbed. Idempotent and self-healing.
+            /// </summary>
+            public static KeyEvac MoveAction(KeyCode sourceKey, string action, KeyCode targetKey, ModifierKeyFlags targetMod = ModifierKeyFlags.None, ModifierKeyFlags sourceMod = ModifierKeyFlags.None) {
+                return new KeyEvac(sourceKey, sourceMod, targetKey, targetMod, action);
             }
         }
 
@@ -93,12 +110,17 @@ namespace TangledeepAccess.Controls {
         /// <c>docs/default-keymap.txt</c> for the stock layout.
         /// </summary>
         private static readonly KeyEvac[] Table = {
-            // Free the right-hand mod block (u/i/j/...) — relocate game screens to Alt+digit.
-            KeyEvac.MoveTo(KeyCode.I, KeyCode.Alpha1, Alt),   // View Consumables
-            KeyEvac.MoveTo(KeyCode.E, KeyCode.Alpha2, Alt),   // View Equipment
-            KeyEvac.MoveTo(KeyCode.J, KeyCode.Alpha3, Alt),   // View Skills
-            KeyEvac.MoveTo(KeyCode.C, KeyCode.Alpha4, Alt),   // View Character Info
-            KeyEvac.MoveTo(KeyCode.Q, KeyCode.Q, Alt),        // View Rumors -> Alt+Q
+            // Free the right-hand mod block (u/i/j/...) — relocate game screens to Alt+digit. These
+            // use MoveAction (single action, owns the target) because E/C/Q are ALSO movement-mirror
+            // targets (Keypad9/3/7): a plain MoveTo would also relocate the mirrored movement onto the
+            // Alt+digit combo, and re-apply on each launch (Rewired persists the map) would stack more
+            // copies — so e.g. Alt+4 ends up opening the character sheet AND stepping the hero. Owning
+            // the target combo scrubs that. I/J use it too for uniformity (no collision, but harmless).
+            KeyEvac.MoveAction(KeyCode.I, "View Consumables", KeyCode.Alpha1, Alt),
+            KeyEvac.MoveAction(KeyCode.E, "View Equipment", KeyCode.Alpha2, Alt),
+            KeyEvac.MoveAction(KeyCode.J, "View Skills", KeyCode.Alpha3, Alt),
+            KeyEvac.MoveAction(KeyCode.C, "View Character Info", KeyCode.Alpha4, Alt),
+            KeyEvac.MoveAction(KeyCode.Q, "View Rumors", KeyCode.Q, Alt),
             KeyEvac.MoveTo(KeyCode.U, KeyCode.Semicolon),     // Healing Flask / Consumable / Unequip -> ;
 
             // D is freed for move-east. Both its actions are covered elsewhere: Use Stairs is
@@ -220,6 +242,11 @@ namespace TangledeepAccess.Controls {
         // Snapshot the matching element maps first (we mutate the map below), then delete each and,
         // for a relocation, recreate it on the target carrying its action and axis polarity.
         private static void Evacuate(ControllerMap map, KeyEvac evac) {
+            if (evac.Action != null) {
+                EvacuateAction(map, evac);
+                return;
+            }
+
             List<ActionElementMap> matches = new List<ActionElementMap>();
             foreach (ActionElementMap ae in map.GetElementMaps()) {
                 if (ae.keyCode == evac.SourceKey && ae.modifierKeyFlags == evac.SourceMod) {
@@ -240,6 +267,57 @@ namespace TangledeepAccess.Controls {
                 string dest = evac.TargetKey.HasValue ? "to " + Describe(evac.TargetKey.Value, evac.TargetMod) : "(deleted)";
                 Log.Info("Evacuated " + matches.Count + " binding(s) from " + Describe(evac.SourceKey, evac.SourceMod) + " " + dest);
             }
+        }
+
+        // Relocate a single named action and own its target combo (see KeyEvac.MoveAction). Removes
+        // the action from the source key (leaving any other bindings there, e.g. a mirrored movement),
+        // clears the target combo entirely (scrubbing stray/accumulated bindings), then binds the
+        // action there. Self-healing across launches and idempotent within a pass.
+        private static void EvacuateAction(ControllerMap map, KeyEvac evac) {
+            InputAction action = ReInput.mapping.GetAction(evac.Action);
+            if (action == null) {
+                Log.Warn("KeymapPatch: unknown action '" + evac.Action + "', cannot relocate");
+                return;
+            }
+
+            int actionId = action.id;
+            KeyCode target = evac.TargetKey.Value;
+
+            // Strip the action off the source key (the bare key is then free for movement/menu nav).
+            int removedFromSource = DeleteWhere(
+                map, ae => ae.keyCode == evac.SourceKey && ae.modifierKeyFlags == evac.SourceMod && ae.actionId == actionId
+            );
+
+            // Own the target combo: clear it, then bind exactly this action.
+            int clearedFromTarget = DeleteWhere(
+                map, ae => ae.keyCode == target && ae.modifierKeyFlags == evac.TargetMod
+            );
+            map.CreateElementMap(actionId, Pole.Positive, target, evac.TargetMod);
+
+            if (removedFromSource > 0 || clearedFromTarget != 1) {
+                Log.Info(
+                    "Bound '" + evac.Action + "' to " + Describe(target, evac.TargetMod)
+                    + " (removed " + removedFromSource + " from " + evac.SourceKey
+                    + ", scrubbed " + clearedFromTarget + " stale on target)"
+                );
+            }
+        }
+
+        // Delete every element map matching the predicate; returns how many were removed. Snapshots
+        // first because deleting mutates the map's collection.
+        private static int DeleteWhere(ControllerMap map, System.Func<ActionElementMap, bool> predicate) {
+            List<ActionElementMap> matches = new List<ActionElementMap>();
+            foreach (ActionElementMap ae in map.GetElementMaps()) {
+                if (predicate(ae)) {
+                    matches.Add(ae);
+                }
+            }
+
+            foreach (ActionElementMap ae in matches) {
+                map.DeleteElementMap(ae.id);
+            }
+
+            return matches.Count;
         }
 
         // Duplicate every binding on the source key onto the target key, keeping the source.
