@@ -4,10 +4,9 @@ namespace TangledeepAccess.Audio {
     /// <summary>
     /// A fixed-frequency triangle wave: same shape role as <see cref="SineGrain"/> (starts at 0,
     /// peaks +A at a quarter period, 0 at the half, -A at three quarters) but with the brighter,
-    /// reedier timbre of its odd harmonics. Used for entities directly aligned with the hero, whose
-    /// dead-center pan is an unstable image — the distinct timbre carries the "dead ahead/behind"
-    /// information the pan can't. Duration is capped at 1 second for the same integral-frequency
-    /// periodicity reason as the sine.
+    /// reedier timbre of its odd harmonics. It is the scanner's tone timbre — its harmonics give a
+    /// firmer image than a pure sine, including dead-center. Duration is capped at 1 second for the
+    /// same integral-frequency periodicity reason as the sine.
     /// </summary>
     public sealed class TriangleGrain : Grain {
         public const double CappedDuration = 1.0;

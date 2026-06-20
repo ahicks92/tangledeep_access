@@ -10,7 +10,7 @@ namespace TangledeepAccess.Audio {
     /// Distance falls out of x and y together, so there is no separate loudness-by-distance mapping.
     ///
     /// The scanner sweeps entities one at a time at <see cref="IntervalSeconds"/>; this builds the
-    /// cue for a single entity. Sine grains to start; swap the inner grain later for a richer source.
+    /// cue for a single entity. Triangle grains for now; swap the inner grain later for a richer source (per-entity sample files).
     /// </summary>
     public static class ScanCue {
         // ===================== Tuning constants — tweak freely =====================
@@ -61,27 +61,24 @@ namespace TangledeepAccess.Audio {
         }
 
         /// <summary>
-        /// Build the two-grain cue for an entity at tile offset (x, y) from the hero. Directly aligned
-        /// entities (x = 0, dead-center pan) use a triangle timbre instead of a sine, so they are
-        /// identifiable by ear despite the unstable center image.
+        /// Build the two-grain cue for an entity at tile offset (x, y) from the hero: a base-pitch
+        /// reference grain then a y-pitched offset a gap later, both panned by x. Triangle timbre
+        /// throughout: the x = 0 dead-center case used to be special-cased to a triangle (a pure sine's
+        /// centered image was hard to place), but with triangle now universal and the timeline's
+        /// interaural time delay carrying left/right placement, that special case is gone.
         /// </summary>
         public static GrainTimeline Build(int x, int y) {
             double pan = Pan(x);
-            bool aligned = x == 0;
             var timeline = new GrainTimeline();
-            // The ping is a base-pitch reference grain then a y-pitched offset a gap later, same pan.
             // Pitch is baked into the offset grain's frequency, so its placement rate stays 1 — the
             // scanner reads y from the reference→offset interval.
-            Ping.Pair(timeline, Tone(ReferenceFrequencyHz, aligned), Tone(SecondFrequencyHz(y), aligned),
+            Ping.Pair(timeline, Tone(ReferenceFrequencyHz), Tone(SecondFrequencyHz(y)),
                       1.0, pan, 0.0, Volume, GapSeconds);
             return timeline;
         }
 
-        private static Grain Tone(double frequencyHz, bool aligned) {
-            Grain oscillator = aligned
-                ? (Grain)new TriangleGrain(frequencyHz)
-                : new SineGrain(frequencyHz);
-            return new AdsrGrain(oscillator, Attack, Decay, Sustain, Release, SustainLevel);
+        private static Grain Tone(double frequencyHz) {
+            return new AdsrGrain(new TriangleGrain(frequencyHz), Attack, Decay, Sustain, Release, SustainLevel);
         }
     }
 }

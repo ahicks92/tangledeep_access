@@ -5,7 +5,7 @@ namespace TangledeepAccess.Tests.Audio {
     public class ScanCueTests {
         private static double Freq(GrainPlacement p) {
             var adsr = Assert.IsType<AdsrGrain>(p.Grain);
-            return Assert.IsType<SineGrain>(adsr.Inner).Frequency;
+            return Assert.IsType<TriangleGrain>(adsr.Inner).Frequency;
         }
 
         [Fact]
@@ -69,14 +69,15 @@ namespace TangledeepAccess.Tests.Audio {
         }
 
         [Fact]
-        public void AlignedEntityUsesTriangleOffAxisUsesSine() {
+        public void AllGrainsUseTriangleRegardlessOfAlignment() {
             var aligned = ScanCue.Build(0, 3).Placements;   // x = 0: directly aligned
             var offAxis = ScanCue.Build(3, 3).Placements;   // x != 0
 
+            // Triangle throughout now — the dead-center image is held by ITD, so no aligned special case.
             Assert.IsType<TriangleGrain>(((AdsrGrain)aligned[0].Grain).Inner);
             Assert.IsType<TriangleGrain>(((AdsrGrain)aligned[1].Grain).Inner);
-            Assert.IsType<SineGrain>(((AdsrGrain)offAxis[0].Grain).Inner);
-            Assert.IsType<SineGrain>(((AdsrGrain)offAxis[1].Grain).Inner);
+            Assert.IsType<TriangleGrain>(((AdsrGrain)offAxis[0].Grain).Inner);
+            Assert.IsType<TriangleGrain>(((AdsrGrain)offAxis[1].Grain).Inner);
         }
 
         [Fact]
