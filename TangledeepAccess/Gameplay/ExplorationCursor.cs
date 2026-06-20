@@ -347,7 +347,7 @@ namespace TangledeepAccess.Gameplay {
             var pos = new Vector2(_x, _y);
             if (withCoords) {
                 message.PushRelativeCoordinates(pos - hero.GetPos());
-                message.ListItem(); // subsequent content is a new, comma-separated item
+                message.ListItemForcedComma(); // subsequent content is a new, comma-separated item
             }
 
             if (!Visibility.Explored(_x, _y)) {
@@ -361,7 +361,18 @@ namespace TangledeepAccess.Gameplay {
                 PlayTileCues(pos, tile);
             }
 
+            // Entities lead: a monster/NPC on the tile is the most important thing to hear, so it is
+            // read before the terrain and shape (which follow it), then ground items. The occupant is
+            // always read in full, not differenced.
+            string occupant = TileDescriber.Occupant(tile);
+            if (occupant != null) {
+                message.ListItem(occupant);
+            }
+
             TileKey key = KeyAt(pos, tile);
+            if (occupant != null) {
+                message.ListItemForcedComma(); // delimit the entity from the terrain that follows
+            }
             if (differential) {
                 key.AppendChanges(message, _lastKey);
             } else {
@@ -369,10 +380,6 @@ namespace TangledeepAccess.Gameplay {
             }
             _lastKey = key;
 
-            string occupant = TileDescriber.Occupant(tile);
-            if (occupant != null) {
-                message.ListItem(occupant);
-            }
             TileDescriber.AppendItems(message, tile);
         }
 
