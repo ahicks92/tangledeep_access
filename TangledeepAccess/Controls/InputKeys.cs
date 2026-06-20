@@ -148,29 +148,6 @@ namespace TangledeepAccess.Controls {
         }
 
         /// <summary>
-        /// Audio volume nudges: F8 music, F9 sound effects, F10 footsteps. Plain press lowers,
-        /// Shift raises (Dx = -1 / +1). A deliberately hacky one-time tuning aid — the game's
-        /// default music volume drowns out speech and cues — not a polished settings UI. The game
-        /// leaves F8-F10 unbound, and the gameplay drainer suppresses the frame, so this shadows
-        /// nothing.
-        /// </summary>
-        public static ModInputAction? Volume() {
-            ModInputKind kind;
-            if (Input.GetKeyDown(KeyCode.F8)) {
-                kind = ModInputKind.VolumeMusic;
-            } else if (Input.GetKeyDown(KeyCode.F9)) {
-                kind = ModInputKind.VolumeSfx;
-            } else if (Input.GetKeyDown(KeyCode.F10)) {
-                kind = ModInputKind.VolumeFootsteps;
-            } else {
-                return null;
-            }
-
-            bool up = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
-            return new ModInputAction { Kind = kind, Dx = up ? 1 : -1 };
-        }
-
-        /// <summary>
         /// Navigation-aid hotkeys, the gameplay drainer's set. Each aid sits on an F-key slot
         /// (F1 = index 0 … F4 = 3): <b>Shift</b>+Fn toggles it on/off, <b>Ctrl</b>+Fn fires it once
         /// without moving. The game binds only <i>bare</i> F-keys (F1 help, F2 UI page, F5-F8 weapons)

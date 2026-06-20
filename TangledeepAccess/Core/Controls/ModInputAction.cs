@@ -75,12 +75,6 @@ namespace TangledeepAccess.Controls {
         LogHistoryPrev,
         LogHistoryNext,
 
-        // Audio volume nudges (free play). Dx carries the direction: +1 louder, -1 quieter.
-        // A hacky one-time tuning aid — music drowns out speech/cues by default.
-        VolumeMusic,
-        VolumeSfx,
-        VolumeFootsteps,
-
         // Navigation aids (free play): a framework of audio cues on F-key slots, distinct from the
         // spoken queries. Dx carries the aid index (F1 = 0, F2 = 1, …). Shift+Fn toggles an aid on
         // or off; Ctrl+Fn fires it once without moving.

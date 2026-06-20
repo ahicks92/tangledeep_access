@@ -14,7 +14,7 @@ namespace TangledeepAccess.Gameplay {
         public static readonly GameplayInputDrainer Instance = new GameplayInputDrainer();
 
         public override bool Claim(bool suppressWhileHeld) {
-            ModInputAction? action = InputKeys.Query() ?? InputKeys.Volume() ?? InputKeys.NavAids();
+            ModInputAction? action = InputKeys.Query() ?? InputKeys.NavAids();
             if (action.HasValue) {
                 InputQueue.Enqueue(this, action.Value);
                 return true;
@@ -26,15 +26,6 @@ namespace TangledeepAccess.Gameplay {
         public override void Realize(ModInputAction action, PrismSpeech speech) {
             if (action.Kind == ModInputKind.RepeatLast) {
                 speech.RepeatLast();
-                return;
-            }
-
-            // Volume nudges apply whenever the audio manager exists (even pre-run), so they bypass
-            // GameplayReader's in-play gate.
-            if (action.Kind == ModInputKind.VolumeMusic
-                || action.Kind == ModInputKind.VolumeSfx
-                || action.Kind == ModInputKind.VolumeFootsteps) {
-                speech.Speak(VolumeControl.Adjust(action));
                 return;
             }
 
