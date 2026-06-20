@@ -48,7 +48,7 @@ namespace TangledeepAccess.Gameplay {
             return timeline.Placements.Count > before;
         }
 
-        /// <summary>Play the wall tones alone, immediately — the Ctrl+F1 manual ping.</summary>
+        /// <summary>Play the wall tones alone, immediately — the Shift+F1 manual ping.</summary>
         public static void Play() {
             var timeline = new GrainTimeline();
             if (AddTo(timeline)) {

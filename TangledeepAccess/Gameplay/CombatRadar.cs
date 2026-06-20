@@ -52,7 +52,7 @@ namespace TangledeepAccess.Gameplay {
             var timeline = new GrainTimeline();
             bool any = false;
 
-            // Wall tones keep their behavior: only when auto wall echo is on (Shift+F1) and the hero
+            // Wall tones keep their behavior: only when auto wall echo is on (Ctrl+F1) and the hero
             // actually moved this turn.
             if (NavAids.WallEchoAuto && heroMoved) {
                 any |= WallEcho.AddTo(timeline);

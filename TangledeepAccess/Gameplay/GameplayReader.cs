@@ -31,11 +31,11 @@ namespace TangledeepAccess.Gameplay {
 
             // Navigation aids. Shift+Fn and Ctrl+Fn each route to the aid's own hook, which decides
             // what to do (toggle, fire once, …) and returns any line to speak.
-            if (action.Kind == ModInputKind.NavAidToggle) {
+            if (action.Kind == ModInputKind.NavAidShift) {
                 speech.Speak(NavAids.OnShiftKey(action.Dx));
                 return;
             }
-            if (action.Kind == ModInputKind.NavAidTrigger) {
+            if (action.Kind == ModInputKind.NavAidCtrl) {
                 speech.Speak(NavAids.OnCtrlKey(action.Dx));
                 return;
             }

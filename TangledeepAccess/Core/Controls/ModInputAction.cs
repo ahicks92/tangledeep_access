@@ -76,10 +76,11 @@ namespace TangledeepAccess.Controls {
         LogHistoryNext,
 
         // Navigation aids (free play): a framework of audio cues on F-key slots, distinct from the
-        // spoken queries. Dx carries the aid index (F1 = 0, F2 = 1, …). Shift+Fn toggles an aid on
-        // or off; Ctrl+Fn fires it once without moving.
-        NavAidToggle,
-        NavAidTrigger,
+        // spoken queries. Dx carries the aid index (F1 = 0, F2 = 1, …). These name only the modifier;
+        // each aid's hook decides the meaning, but by convention Ctrl+Fn toggles an aid on or off and
+        // Shift+Fn fires it once without moving.
+        NavAidShift,
+        NavAidCtrl,
 
         // Exploration cursor control (free play). Move steps the cursor (the speculation ring),
         // CursorSkip (Shift+ring) skips to the next terrain/shape change or occupant; the rest are

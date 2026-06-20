@@ -149,7 +149,7 @@ namespace TangledeepAccess.Controls {
 
         /// <summary>
         /// Navigation-aid hotkeys, the gameplay drainer's set. Each aid sits on an F-key slot
-        /// (F1 = index 0 … F4 = 3): <b>Shift</b>+Fn toggles it on/off, <b>Ctrl</b>+Fn fires it once
+        /// (F1 = index 0 … F4 = 3): <b>Ctrl</b>+Fn toggles it on/off, <b>Shift</b>+Fn fires it once
         /// without moving. The game binds only <i>bare</i> F-keys (F1 help, F2 UI page, F5-F8 weapons)
         /// and never an F-key with a modifier, so claiming the modified combos shadows nothing; a bare
         /// F-key returns null and stays the game's.
@@ -171,10 +171,10 @@ namespace TangledeepAccess.Controls {
             bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
             if (shift) {
-                return new ModInputAction { Kind = ModInputKind.NavAidToggle, Dx = index };
+                return new ModInputAction { Kind = ModInputKind.NavAidShift, Dx = index };
             }
             if (ctrl) {
-                return new ModInputAction { Kind = ModInputKind.NavAidTrigger, Dx = index };
+                return new ModInputAction { Kind = ModInputKind.NavAidCtrl, Dx = index };
             }
 
             return null; // a bare F-key belongs to the game

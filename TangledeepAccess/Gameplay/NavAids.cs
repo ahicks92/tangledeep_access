@@ -29,17 +29,17 @@ namespace TangledeepAccess.Gameplay {
     }
 
     /// <summary>
-    /// Wall echo (F1): Shift+F1 toggles auto-on-move (<see cref="NavAid.Enabled"/>, on by default),
-    /// Ctrl+F1 fires it once. The auto-on-move play itself lives in <see cref="CombatRadar"/>, which
+    /// Wall echo (F1): Ctrl+F1 toggles auto-on-move (<see cref="NavAid.Enabled"/>, on by default),
+    /// Shift+F1 fires it once. The auto-on-move play itself lives in <see cref="CombatRadar"/>, which
     /// reads <see cref="Enabled"/> (via <see cref="NavAids.WallEchoAuto"/>) and combines the wall tones
     /// with monster-moved pings on one shared timeline — so this aid only owns the keys and the toggle.
     /// </summary>
     internal sealed class WallEchoAid : NavAid {
         public WallEchoAid() : base("wall echo", enabled: true) { }
 
-        public override MessageBuilder OnShift() => ToggleSpoken();
+        public override MessageBuilder OnCtrl() => ToggleSpoken();
 
-        public override MessageBuilder OnCtrl() {
+        public override MessageBuilder OnShift() {
             WallEcho.Play();
             return null;
         }
@@ -59,7 +59,7 @@ namespace TangledeepAccess.Gameplay {
             new ObjectRadar(), // F2
         };
 
-        /// <summary>Whether wall echo's auto-on-move is enabled (Shift+F1). Read by <see cref="CombatRadar"/>.</summary>
+        /// <summary>Whether wall echo's auto-on-move is enabled (Ctrl+F1). Read by <see cref="CombatRadar"/>.</summary>
         public static bool WallEchoAuto => Wall.Enabled;
 
         // Last hero tile, shared across all aids for the on-move hook.
