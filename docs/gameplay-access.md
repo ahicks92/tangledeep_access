@@ -2,7 +2,7 @@
 
 How the mod makes Tangledeep audible, and why it is built this way. Companion docs:
 `ui-framework.md` (the game's menu internals), `new-game-menu.md` (creation research),
-`input-flow.md`, `controls.md`. Written 2026-06-17; kept current as features land — now
+`input-flow.md`. Written 2026-06-17; kept current as features land — now
 covers the full menu/creation/dialog overlays, the turn log, all gameplay reads (tile,
 scan, status, hotbar, look cursor, exits, repeat), ranged targeting, shops, and the passive
 movement/health announcements.
@@ -62,7 +62,7 @@ menu navigation.
 ## Gameplay reads (tile reading, scanner) and the input model
 
 On-demand gameplay queries are mod hotkeys, chosen from keys the Default layout leaves
-unbound (`controls.md`) so they never shadow a game action. Most resolve through
+unbound (`Controls/InputKeys.cs`) so they never shadow a game action. Most resolve through
 `GameplayReader`:
 
 - **Read here (`K`)** — the hero's tile: map name, coordinates, terrain type, ground items,
@@ -100,8 +100,8 @@ offsets ("2 north, 3 east"), an 8-way compass, and Chebyshev step counts.
 
 **Input model.** In gameplay the mod's input patch acts only when no menu is open, reads its
 hotkeys (`K` `L` `Y` `A` `'` `;`, plus arrows/numpad/Home while the look cursor is active),
-and consumes that frame. The keys are unbound in the game's Default layout (`controls.md`),
-so consuming them shadows nothing. The hook only *requests* a command
+and consumes that frame. The keys are unbound in the game's Default layout
+(`Controls/InputKeys.cs`), so consuming them shadows nothing. The hook only *requests* a command
 (`UiRuntime.SetPendingGameplay`); the pump runs it through `GameplayReader` and speaks — the
 same hook-requests / pump-executes split used for menu nav and the log, which keeps all
 game-state reads and speech on the main-thread pump and out of Harmony hooks.

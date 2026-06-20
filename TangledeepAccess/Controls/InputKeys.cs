@@ -4,7 +4,7 @@ namespace TangledeepAccess.Controls {
     /// <summary>
     /// The keymap: the one place physical keys are read and turned into a <see cref="ModInputAction"/>.
     /// Reads raw <c>UnityEngine.Input</c> — the mod's keys are chosen from those the Default control
-    /// layout leaves unbound (see docs/controls.md), so claiming them shadows no game action. Methods
+    /// layout leaves unbound (this file is the listing), so claiming them shadows no game action. Methods
     /// are grouped by the context that consults each set; a context composes the groups it honors.
     /// </summary>
     internal static class InputKeys {

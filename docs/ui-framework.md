@@ -7,7 +7,7 @@ How the game's menu and UI system works, for making it speak. Citations are
 against the decompile on 2026-06-16; surfaces flagged "unconfirmed" below were
 reported by source survey but not line-verified.
 
-Companion docs: `input-flow.md` (how input reaches these menus), `controls.md`.
+Companion docs: `input-flow.md` (how input reaches these menus).
 
 ## Big picture
 

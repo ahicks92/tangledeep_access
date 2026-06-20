@@ -6,7 +6,7 @@ OUTSIDE this repo at `../tangledeep-decompiled/Assembly-CSharp/` (game) and
 `../tangledeep-decompiled/Rewired_Core/` (Rewired). Verified against the decompile
 on 2026-06-16.
 
-Companion docs: `controls.md` (the binding listing), `ui-framework.md` (menus).
+Companion docs: `Controls/InputKeys.cs` (the binding listing), `ui-framework.md` (menus).
 
 ## Summary
 
