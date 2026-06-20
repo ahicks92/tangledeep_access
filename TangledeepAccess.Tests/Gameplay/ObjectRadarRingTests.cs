@@ -4,111 +4,92 @@ using Xunit;
 
 namespace TangledeepAccess.Tests.Gameplay {
     public class ObjectRadarRingTests {
-        // Identity is by reference, so use distinct object instances as ids (strings interned would
-        // alias, so wrap each in a fresh object).
-        private static readonly object A = new object();
-        private static readonly object B = new object();
-        private static readonly object C = new object();
-
-        private static IList<ObjectRadarRing.Entry> Set(params (object id, int x, int y)[] items) {
+        private static IList<ObjectRadarRing.Entry> Set(params (int x, int y)[] items) {
             var list = new List<ObjectRadarRing.Entry>();
             foreach (var it in items) {
-                list.Add(new ObjectRadarRing.Entry(it.id, it.x, it.y));
+                list.Add(new ObjectRadarRing.Entry(it.x, it.y));
             }
             return list;
         }
 
-        [Fact]
-        public void EmptyRingYieldsNull() {
-            Assert.Null(new ObjectRadarRing().Next());
+        // Drain a loaded ring into the (x, y) sequence it pings.
+        private static List<(int x, int y)> Sweep(ObjectRadarRing ring) {
+            var order = new List<(int, int)>();
+            ObjectRadarRing.Entry? e;
+            while ((e = ring.Next()).HasValue) {
+                order.Add((e.Value.X, e.Value.Y));
+            }
+            return order;
         }
 
         [Fact]
-        public void CyclesThroughAllEntries() {
+        public void EmptyRingIsDoneAndYieldsNull() {
             var ring = new ObjectRadarRing();
-            ring.Reconcile(Set((A, 1, 0), (B, 2, 0), (C, 3, 0)));
-            Assert.Equal(3, ring.Count);
-
-            // Three distinct ids over three Next() calls, then it wraps to the first again.
-            var first = ring.Next().Value.Id;
-            var second = ring.Next().Value.Id;
-            var third = ring.Next().Value.Id;
-            Assert.Equal(3, new HashSet<object> { first, second, third }.Count);
-            Assert.Same(first, ring.Next().Value.Id); // wrapped
+            Assert.True(ring.SweepDone);
+            Assert.Null(ring.Next());
         }
 
         [Fact]
-        public void NewcomerIsInsertedAtCursorSoItPingsNext() {
+        public void LoadSortsByXThenYImmediately() {
             var ring = new ObjectRadarRing();
-            ring.Reconcile(Set((A, 0, 0), (B, 0, 0)));
-            ring.Next(); // consume one; cursor now points at the other survivor
-
-            // C appears. It must be the very next thing played, ahead of the remaining old entry.
-            ring.Reconcile(Set((A, 0, 0), (B, 0, 0), (C, 0, 0)));
-            Assert.Same(C, ring.Next().Value.Id);
+            ring.Load(Set((2, 5), (1, 9), (1, 3)));
+            // Column-major: x ascending, then y ascending -> (1,3), (1,9), (2,5).
+            Assert.Equal(new List<(int, int)> { (1, 3), (1, 9), (2, 5) }, Sweep(ring));
         }
 
         [Fact]
-        public void MovingEntityKeepsItsSlotAndRefreshesCoordinates() {
+        public void NextReturnsNullAndSweepDoneAfterExhaustion() {
             var ring = new ObjectRadarRing();
-            ring.Reconcile(Set((A, 1, 1)));
-            ring.Reconcile(Set((A, 4, -2))); // same id, new position; not a newcomer
-
-            Assert.Equal(1, ring.Count);
-            ObjectRadarRing.Entry e = ring.Next().Value;
-            Assert.Same(A, e.Id);
-            Assert.Equal(4, e.X);
-            Assert.Equal(-2, e.Y);
+            ring.Load(Set((0, 0), (1, 0)));
+            Assert.False(ring.SweepDone);
+            ring.Next();
+            Assert.False(ring.SweepDone); // one left
+            ring.Next();
+            Assert.True(ring.SweepDone); // exhausted
+            Assert.Null(ring.Next());
         }
 
         [Fact]
-        public void GoneEntityIsDroppedAndNeverPlayed() {
+        public void LoadReplacesTheSnapshotAndRewinds() {
             var ring = new ObjectRadarRing();
-            ring.Reconcile(Set((A, 0, 0), (B, 0, 0), (C, 0, 0)));
-            ring.Reconcile(Set((A, 0, 0), (C, 0, 0))); // B left view
+            ring.Load(Set((5, 0), (6, 0)));
+            ring.Next(); // consume one
 
+            // A fresh snapshot fully replaces the old one and starts from the top.
+            ring.Load(Set((3, 1), (2, 2)));
             Assert.Equal(2, ring.Count);
-            var ids = new HashSet<object> { ring.Next().Value.Id, ring.Next().Value.Id };
-            Assert.DoesNotContain(B, ids);
+            Assert.False(ring.SweepDone);
+            Assert.Equal(new List<(int, int)> { (2, 2), (3, 1) }, Sweep(ring));
         }
 
         [Fact]
-        public void SweepIsReorderedByXThenYOnEachLap() {
+        public void DoesNotWrap() {
+            // Unlike a cycling ring, the snapshot is one-shot: after the last entry Next stays null
+            // until the next Load.
             var ring = new ObjectRadarRing();
-            // Inserted out of spatial order; reconcile preserves insertion order, so the first lap
-            // plays in that order, but the second lap sweeps by x then y.
-            ring.Reconcile(Set((A, 2, 5), (B, 1, 9), (C, 1, 3)));
-
-            // First lap: insertion order (no sort yet).
-            Assert.Same(A, ring.Next().Value.Id);
-            Assert.Same(B, ring.Next().Value.Id);
-            Assert.Same(C, ring.Next().Value.Id); // wrap here sorts for the next lap
-
-            // Second lap: sorted by x ascending, then y ascending -> C(1,3), B(1,9), A(2,5).
-            Assert.Same(C, ring.Next().Value.Id);
-            Assert.Same(B, ring.Next().Value.Id);
-            Assert.Same(A, ring.Next().Value.Id);
+            ring.Load(Set((0, 0)));
+            Assert.NotNull(ring.Next()); // the single entry
+            Assert.Null(ring.Next());    // no wrap back to the start
+            Assert.Null(ring.Next());
         }
 
         [Fact]
-        public void NewcomerStillPingsNextEvenAfterALapSort() {
+        public void ClearEmptiesAndMarksDone() {
             var ring = new ObjectRadarRing();
-            ring.Reconcile(Set((A, 5, 0), (B, 1, 0)));
-            ring.Next(); // A
-            ring.Next(); // B; wrap sorts to B(1),A(5)
-
-            // C appears mid-lap and must still play immediately, ahead of the sorted survivors.
-            ring.Reconcile(Set((A, 5, 0), (B, 1, 0), (C, 9, 0)));
-            Assert.Same(C, ring.Next().Value.Id);
+            ring.Load(Set((0, 0), (1, 1)));
+            ring.Clear();
+            Assert.Equal(0, ring.Count);
+            Assert.True(ring.SweepDone);
+            Assert.Null(ring.Next());
         }
 
         [Fact]
-        public void RemovingTheUpcomingEntryAdvancesToTheNextSurvivor() {
+        public void CarriesCategoryThroughTheSnapshot() {
             var ring = new ObjectRadarRing();
-            ring.Reconcile(Set((A, 0, 0), (B, 0, 0), (C, 0, 0)));
-            ring.Next(); // played A; B is now next
-            ring.Reconcile(Set((A, 0, 0), (C, 0, 0))); // remove B (the upcoming one)
-            Assert.Same(C, ring.Next().Value.Id); // not A: the cursor tracked the removal
+            ring.Load(new List<ObjectRadarRing.Entry> {
+                new ObjectRadarRing.Entry(0, 0, RadarCategory.Monster),
+            });
+            Assert.Equal(RadarCategory.Monster, ring.Next().Value.Category);
         }
     }
 }
