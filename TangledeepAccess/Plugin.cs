@@ -163,6 +163,10 @@ namespace TangledeepAccess {
             // after any overlay speech above so menu navigation stays responsive.
             _speech?.Speak(GameEventLog.DrainToMessage(), interrupt: false);
 
+            // Active weapon-hotbar slot changed (player cycled/equipped a weapon). Interrupts —
+            // it is direct feedback to a deliberate key press and should land immediately.
+            _speech?.Speak(WeaponWatcher.Poll());
+
             // Notable contents of a tile the hero just stepped onto (items, hazardous terrain).
             // Queued, not interrupting, so it follows the turn's log lines.
             _speech?.Speak(MovementWatcher.PollOnMove(), interrupt: false);

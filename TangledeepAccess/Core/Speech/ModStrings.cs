@@ -137,6 +137,15 @@ namespace TangledeepAccess.Speech {
             return "weapon " + n;
         }
 
+        // Spoken when the player switches the active weapon-hotbar slot, after the weapon name
+        // (e.g. "sword slot 2"). The trailing number is the 1-based hotbar slot.
+        public static string SwitchedWeaponSlot(int n) {
+            return "slot " + n;
+        }
+
+        // The unarmed / default-fists weapon, when the newly active slot holds no real weapon.
+        public const string UnarmedWeapon = "fists";
+
         public const string OffhandSlot = "offhand";
         public const string ArmorSlot = "armor";
 
