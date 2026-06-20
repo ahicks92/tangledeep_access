@@ -58,7 +58,7 @@ namespace TangledeepAccess.Tests.Audio {
         public void DelayAndGainComeFromTheCue() {
             GrainPlacement p = new WallEchoSynth(Sr).Build(2, null, null, null).Placements[0];
             Assert.Equal(WallEchoCue.DelaySeconds(2), p.Start, 9);
-            Assert.Equal(WallEchoCue.Gain(2), p.Gain, 9);
+            Assert.Equal(WallEchoCue.Gain(2) * WallEchoCue.HorizontalLoudnessGain, p.Gain, 9);
         }
     }
 }

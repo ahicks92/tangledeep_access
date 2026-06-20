@@ -41,14 +41,14 @@ namespace TangledeepAccess.Audio {
         /// </summary>
         public GrainTimeline Build(double? left, double? right, double? up, double? down) {
             var timeline = new GrainTimeline();
-            AddWall(timeline, left, _baseBand, WallEchoCue.LeftPan);
-            AddWall(timeline, right, _baseBand, WallEchoCue.RightPan);
-            AddWall(timeline, up, _upBand, WallEchoCue.VerticalPan);
-            AddWall(timeline, down, _downBand, WallEchoCue.VerticalPan);
+            AddWall(timeline, left, _baseBand, WallEchoCue.LeftPan, WallEchoCue.HorizontalLoudnessGain);
+            AddWall(timeline, right, _baseBand, WallEchoCue.RightPan, WallEchoCue.HorizontalLoudnessGain);
+            AddWall(timeline, up, _upBand, WallEchoCue.VerticalPan, WallEchoCue.UpLoudnessGain);
+            AddWall(timeline, down, _downBand, WallEchoCue.VerticalPan, WallEchoCue.DownLoudnessGain);
             return timeline;
         }
 
-        private static void AddWall(GrainTimeline timeline, double? distance, NoisePool pool, double pan) {
+        private static void AddWall(GrainTimeline timeline, double? distance, NoisePool pool, double pan, double loudnessGain) {
             if (!distance.HasValue) {
                 return;
             }
@@ -62,7 +62,7 @@ namespace TangledeepAccess.Audio {
                 WallEchoCue.Release,
                 WallEchoCue.SustainLevel);
 
-            timeline.Add(tone, WallEchoCue.DelaySeconds(d), 1.0, pan, WallEchoCue.Gain(d));
+            timeline.Add(tone, WallEchoCue.DelaySeconds(d), 1.0, pan, WallEchoCue.Gain(d) * loudnessGain);
         }
     }
 }

@@ -20,8 +20,14 @@ namespace TangledeepAccess.Audio {
         /// <summary>Center pitch of the left/right wall tones. ~Middle C (C4).</summary>
         public const double BaseFrequencyHz = 261.63;
 
-        /// <summary>Up wall is this many semitones above base; down wall the same below.</summary>
-        public const double VerticalSemitones = 12.0;
+        /// <summary>
+        /// Up wall is this many semitones above base; down wall the same below. A perfect fifth
+        /// (7) rather than an octave (12): at an octave down the south tone landed near 130 Hz,
+        /// where the ear and small speakers are far less sensitive, so it read as much quieter
+        /// than the other walls despite equal RMS. A fifth keeps the up/down axis distinct while
+        /// holding the down tone (~175 Hz) out of that low-end hole.
+        /// </summary>
+        public const double VerticalSemitones = 7.0;
 
         /// <summary>
         /// Band-pass resonance. Higher Q = narrower band = purer, more sine-like tone; lower Q =
@@ -37,6 +43,21 @@ namespace TangledeepAccess.Audio {
 
         /// <summary>Base gain for an adjacent wall. A raw full-scale tone is harsh, so start below 1.</summary>
         public const double InitialVolume = 0.8;
+
+        // Per-band perceptual loudness trims, multiplied into the distance gain. The noise pools are
+        // RMS-normalized, which equalizes electrical level but not *loudness*: lower-pitched bands
+        // still read quieter to the ear (and on small speakers). Raising VerticalSemitones' tone out
+        // of the deep low end got most of the way; these close the rest of the gap, tuned by ear.
+        // 1.0 = no change.
+
+        /// <summary>Loudness trim for the left/right (base-pitch) walls.</summary>
+        public const double HorizontalLoudnessGain = 1.0;
+
+        /// <summary>Loudness trim for the up (north) wall.</summary>
+        public const double UpLoudnessGain = 1.0;
+
+        /// <summary>Loudness trim for the down (south) wall — lowest pitch, so it gets a boost.</summary>
+        public const double DownLoudnessGain = 1.3;
 
         // 100 ms ADSR envelope over the tone (the four segments sum to ToneSeconds, the slice length).
         public const double Attack = 0.002;
