@@ -49,9 +49,7 @@ namespace TangledeepAccess.Gameplay {
             Reconcile(hero);
             ScanRing.Entry? next = _ring.Next();
             if (next.HasValue) {
-                int sampleRate = AudioSettings.outputSampleRate;
-                GrainTimeline cue = ScanCue.Build(next.Value.X, next.Value.Y);
-                TonePlayer.PlayStereo(cue.RenderStereo(sampleRate), sampleRate);
+                TonePlayer.PlayTimeline(ScanCue.Build(next.Value.X, next.Value.Y));
             }
         }
 

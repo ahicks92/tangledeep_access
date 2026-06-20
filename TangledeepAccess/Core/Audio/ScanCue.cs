@@ -33,8 +33,13 @@ namespace TangledeepAccess.Audio {
         /// <summary>Cadence: seconds between pinging successive entities in the sweep.</summary>
         public const double IntervalSeconds = 0.5;
 
-        // Envelope shared by both grains (their fixed "configuration").
-        public const double Attack = 0.005;
+        // Envelope shared by both grains (their fixed "configuration"). The attack is kept near-zero
+        // because this same envelope currently also wraps the percussive sample-based radar pings
+        // (monster moves, and the other radar .wavs to come), whose loudest transient is at t=0 — a
+        // longer fade-in would mush exactly that punch. A hair of attack (not a hard 0) still avoids an
+        // onset click on samples that don't start at a zero crossing. (Temporary shared compromise: a
+        // sine wants a softer attack than a percussive sample, so these will likely split later.)
+        public const double Attack = 0.001;
         public const double Decay = 0.020;
         public const double Sustain = 0.040;
         public const double Release = 0.015;
@@ -47,14 +52,7 @@ namespace TangledeepAccess.Audio {
 
         /// <summary>Pan in [-1, 1] for a tile offset of <paramref name="x"/> east of the hero.</summary>
         public static double Pan(int x) {
-            double p = x / MaxPanTiles;
-            if (p < -1.0) {
-                return -1.0;
-            }
-            if (p > 1.0) {
-                return 1.0;
-            }
-            return p;
+            return Ping.Pan(x, MaxPanTiles);
         }
 
         /// <summary>Pitch of the second grain for a tile offset of <paramref name="y"/> north of the hero.</summary>
@@ -71,8 +69,11 @@ namespace TangledeepAccess.Audio {
             double pan = Pan(x);
             bool aligned = x == 0;
             var timeline = new GrainTimeline();
-            timeline.Add(Tone(ReferenceFrequencyHz, aligned), 0.0, 1.0, pan, Volume);
-            timeline.Add(Tone(SecondFrequencyHz(y), aligned), GapSeconds, 1.0, pan, Volume);
+            // The ping is a base-pitch reference grain then a y-pitched offset a gap later, same pan.
+            // Pitch is baked into the offset grain's frequency, so its placement rate stays 1 — the
+            // scanner reads y from the reference→offset interval.
+            Ping.Pair(timeline, Tone(ReferenceFrequencyHz, aligned), Tone(SecondFrequencyHz(y), aligned),
+                      1.0, pan, 0.0, Volume, GapSeconds);
             return timeline;
         }
 

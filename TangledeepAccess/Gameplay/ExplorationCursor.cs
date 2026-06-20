@@ -353,6 +353,12 @@ namespace TangledeepAccess.Gameplay {
             if (TileDescriber.Occupant(tile) != null) {
                 CursorSounds.PlayEntity();
             }
+
+            // A telegraphed attack square stacks on top of the passability/entity cues: the tile is
+            // still walkable ground, but a monster is about to strike it.
+            if (TileDescriber.HasDangerSquare(tile)) {
+                CursorSounds.PlayDangerous();
+            }
         }
 
         // A wall has no meaningful local shape, so the shape is suppressed (Open speaks nothing) on

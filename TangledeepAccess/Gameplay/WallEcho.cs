@@ -21,10 +21,15 @@ namespace TangledeepAccess.Gameplay {
         // if the device sample rate changes (rare).
         private static WallEchoSynth _synth;
 
-        public static void Play() {
+        /// <summary>
+        /// Build the wall tones for the hero's current surroundings onto <paramref name="timeline"/> —
+        /// the shared combat-radar buffer that monster-moved pings also write to. Returns true if any
+        /// wall was in range and added (open in all four directions adds nothing).
+        /// </summary>
+        public static bool AddTo(GrainTimeline timeline) {
             HeroPC hero = GameMasterScript.heroPCActor;
             if (hero == null || !GameMasterScript.actualGameStarted || MapMasterScript.activeMap == null) {
-                return;
+                return false;
             }
 
             Vector2 pos = hero.GetPos();
@@ -38,12 +43,17 @@ namespace TangledeepAccess.Gameplay {
                 _synth = new WallEchoSynth(sampleRate);
             }
 
-            GrainTimeline timeline = _synth.Build(left, right, up, down);
-            if (timeline.Placements.Count == 0) {
-                return; // open in all four directions to the sight limit — nothing to ping
-            }
+            int before = timeline.Placements.Count;
+            _synth.AddTo(timeline, left, right, up, down);
+            return timeline.Placements.Count > before;
+        }
 
-            TonePlayer.PlayStereo(timeline.RenderStereo(sampleRate), sampleRate);
+        /// <summary>Play the wall tones alone, immediately — the Ctrl+F1 manual ping.</summary>
+        public static void Play() {
+            var timeline = new GrainTimeline();
+            if (AddTo(timeline)) {
+                TonePlayer.PlayTimeline(timeline);
+            }
         }
 
         /// <summary>

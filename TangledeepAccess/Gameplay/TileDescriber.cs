@@ -184,6 +184,17 @@ namespace TangledeepAccess.Gameplay {
                 || tile.CheckTag(LocationTags.LASER);
         }
 
+        /// <summary>
+        /// True when a charging monster has telegraphed an incoming attack on this tile — the game's
+        /// <c>obj_dangersquare</c> warning marker (a summoned destructible registered on the tile, the
+        /// same one the game queries via <c>GetActorRef</c>). The player's own / ally charges use a
+        /// separate <c>obj_friendlydangersquare</c> marker, which we deliberately ignore: this answers
+        /// "a monster is about to hit here," the red square a sighted player would see underfoot.
+        /// </summary>
+        public static bool HasDangerSquare(MapTileData tile) {
+            return tile != null && tile.HasActorByRef("obj_dangersquare");
+        }
+
         internal static void AppendItems(MessageBuilder message, MapTileData tile) {
             List<Item> items = tile.GetItemsInTile();
             if (items == null) {

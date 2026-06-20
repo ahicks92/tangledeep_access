@@ -41,11 +41,19 @@ namespace TangledeepAccess.Audio {
         /// </summary>
         public GrainTimeline Build(double? left, double? right, double? up, double? down) {
             var timeline = new GrainTimeline();
+            AddTo(timeline, left, right, up, down);
+            return timeline;
+        }
+
+        /// <summary>
+        /// Add the wall tones onto an existing timeline — the shared combat-radar buffer that other
+        /// cues (monster-moved pings) also write to, so a turn's spatial feedback renders as one buffer.
+        /// </summary>
+        public void AddTo(GrainTimeline timeline, double? left, double? right, double? up, double? down) {
             AddWall(timeline, left, _baseBand, WallEchoCue.LeftPan, WallEchoCue.HorizontalLoudnessGain);
             AddWall(timeline, right, _baseBand, WallEchoCue.RightPan, WallEchoCue.HorizontalLoudnessGain);
             AddWall(timeline, up, _upBand, WallEchoCue.VerticalPan, WallEchoCue.UpLoudnessGain);
             AddWall(timeline, down, _downBand, WallEchoCue.VerticalPan, WallEchoCue.DownLoudnessGain);
-            return timeline;
         }
 
         private static void AddWall(GrainTimeline timeline, double? distance, NoisePool pool, double pan, double loudnessGain) {

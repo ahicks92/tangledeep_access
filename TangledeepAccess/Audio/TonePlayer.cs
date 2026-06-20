@@ -40,6 +40,19 @@ namespace TangledeepAccess.Audio {
             return source;
         }
 
+        /// <summary>
+        /// Render a grain timeline at the device output rate and play it. The single play path for the
+        /// scanner ping, the wall echo, and the combat radar; no-ops on an empty timeline.
+        /// </summary>
+        public static void PlayTimeline(GrainTimeline timeline) {
+            if (timeline == null || timeline.Placements.Count == 0) {
+                return;
+            }
+
+            int sampleRate = AudioSettings.outputSampleRate;
+            PlayStereo(timeline.RenderStereo(sampleRate), sampleRate);
+        }
+
         /// <summary>Play an interleaved stereo buffer (L, R, L, R, …) rendered at <paramref name="sampleRate"/> Hz.</summary>
         public static void PlayStereo(float[] pcm, int sampleRate) {
             if (pcm == null || pcm.Length == 0) {

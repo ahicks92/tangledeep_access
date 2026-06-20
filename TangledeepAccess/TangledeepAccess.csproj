@@ -49,6 +49,10 @@
             LogicalName="TangledeepAccess.Sounds.cursor_entity.wav" />
         <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\cursor_skipped.wav"
             LogicalName="TangledeepAccess.Sounds.cursor_skipped.wav" />
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\dangerous_tile.wav"
+            LogicalName="TangledeepAccess.Sounds.dangerous_tile.wav" />
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\sounds\monster_moved.wav"
+            LogicalName="TangledeepAccess.Sounds.monster_moved.wav" />
     </ItemGroup>
 
     <!-- Generate the Plugin.PluginVersion constant from <Version> (Directory.Build.props)

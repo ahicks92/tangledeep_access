@@ -155,15 +155,23 @@ namespace TangledeepAccess {
             // Queued, not interrupting, so it follows the turn's log lines.
             _speech?.Speak(MovementWatcher.PollOnMove(), interrupt: false);
 
+            // Warn (pure audio) at the start of any turn the hero stands on a telegraphed attack
+            // square — the audible substitute for the red danger marker a sighted player would see.
+            DangerWatcher.PollTurn();
+
             // Keep the exploration cursor following the hero (when follow mode is on) and centered
             // after a map change. Silent — cursor reads are on demand.
             ExplorationCursor.SyncFollow();
 
-            // Navigation aids. Per-step aids (wall echo) fire on each hero tile change; continuous
-            // aids (the entity scanner) advance on their own clock via Tick. Pure audio through their
-            // own AudioSources, independent of speech. Toggle/trigger on Shift/Ctrl + F keys.
+            // Navigation aids. The continuous entity scanner (F2) advances on its own clock via Tick;
+            // the F-key Shift/Ctrl toggles/triggers are realized through the input queue. Pure audio
+            // through their own AudioSources, independent of speech.
             NavAids.PollOnMove();
             NavAids.Tick(UnityEngine.Time.deltaTime);
+
+            // Combat radar: one shared buffer per turn carrying the wall-echo tones (when auto wall echo
+            // is on and the hero moved) plus a ping for each visible monster that moved this turn.
+            CombatRadar.PollTurn();
 
             // Low/critical health warning. Interrupts — survival in a permadeath game trumps
             // whatever else is queued.

@@ -17,11 +17,13 @@ namespace TangledeepAccess.Audio {
         public const float ImpassableVolume = 0.6f;
         public const float EntityVolume = 0.7f;
         public const float SkippedVolume = 0.5f;
+        public const float DangerousVolume = 0.7f;
 
         private static AudioClip _ground;
         private static AudioClip _impassable;
         private static AudioClip _entity;
         private static AudioClip _skipped;
+        private static AudioClip _dangerous;
         private static bool _loaded;
 
         public static void PlayGround() {
@@ -44,6 +46,13 @@ namespace TangledeepAccess.Audio {
             TonePlayer.PlayClip(_skipped, SkippedVolume);
         }
 
+        /// <summary>The telegraphed-danger cue: a charging monster will strike this tile (its warning
+        /// square). Played both under the cursor and at the start of a turn the hero stands on one.</summary>
+        public static void PlayDangerous() {
+            EnsureLoaded();
+            TonePlayer.PlayClip(_dangerous, DangerousVolume);
+        }
+
         private static void EnsureLoaded() {
             if (_loaded) {
                 return;
@@ -54,6 +63,7 @@ namespace TangledeepAccess.Audio {
             _impassable = Load("cursor_impassable.wav");
             _entity = Load("cursor_entity.wav");
             _skipped = Load("cursor_skipped.wav");
+            _dangerous = Load("dangerous_tile.wav");
         }
 
         private static AudioClip Load(string file) {
