@@ -273,5 +273,6 @@ namespace TangledeepAccess.Speech {
         public static string ElementDamage(string value) {
             return "damage " + value;
         }
+
     }
 }
