@@ -10,7 +10,7 @@ namespace TangledeepAccess.Gameplay {
     /// the next sweep. Entities discovered mid-sweep do not barge in — they appear in the next
     /// snapshot. Pure (Core): payload is integer tile offsets, so it tests without the engine.
     /// </summary>
-    public sealed class ObjectRadarRing {
+    public sealed class ObjectRadarSnapshot {
         public struct Entry {
             public int X;
             public int Y;

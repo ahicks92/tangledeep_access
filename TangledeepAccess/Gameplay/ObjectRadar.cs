@@ -19,8 +19,8 @@ namespace TangledeepAccess.Gameplay {
         // ping spacing is ScanCue.IntervalSeconds; this is the longer gap that delimits whole sweeps.
         private const double RestSeconds = 1.5;
 
-        private readonly ObjectRadarRing _ring = new ObjectRadarRing();
-        private readonly List<ObjectRadarRing.Entry> _current = new List<ObjectRadarRing.Entry>();
+        private readonly ObjectRadarSnapshot _snapshot = new ObjectRadarSnapshot();
+        private readonly List<ObjectRadarSnapshot.Entry> _current = new List<ObjectRadarSnapshot.Entry>();
         private double _timer;
         private bool _resting; // between sweeps, counting RestSeconds; otherwise mid-sweep
 
@@ -28,7 +28,7 @@ namespace TangledeepAccess.Gameplay {
 
         public override MessageBuilder OnCtrl() {
             MessageBuilder spoken = ToggleSpoken();
-            _ring.Clear();
+            _snapshot.Clear();
             if (Enabled) {
                 // Arm the rest timer as already elapsed so the first sweep starts on the next tick
                 // rather than after an initial RestSeconds wait.
@@ -75,7 +75,7 @@ namespace TangledeepAccess.Gameplay {
             LoadSnapshot(hero);
             _timer = 0.0;
             _resting = false;
-            if (_ring.Count == 0) {
+            if (_snapshot.Count == 0) {
                 _resting = true;
                 return;
             }
@@ -85,18 +85,18 @@ namespace TangledeepAccess.Gameplay {
         // Ping the next entity in the current snapshot; when that was the last one, rest before the
         // next sweep (the timer is already zeroed, so RestSeconds is measured from this final ping).
         private void Ping() {
-            ObjectRadarRing.Entry? next = _ring.Next();
+            ObjectRadarSnapshot.Entry? next = _snapshot.Next();
             if (next.HasValue) {
                 TonePlayer.PlayTimeline(VoicePing(next.Value));
             }
-            if (_ring.SweepDone) {
+            if (_snapshot.SweepDone) {
                 _resting = true;
             }
         }
 
         // The ping for one entity: its category's radar sample if one is loaded, else the default
         // triangle tone. Both share ScanCue's pan/pitch/level/envelope, so only the timbre differs.
-        private static GrainTimeline VoicePing(ObjectRadarRing.Entry e) {
+        private static GrainTimeline VoicePing(ObjectRadarSnapshot.Entry e) {
             if (SampleBank.TryGet(e.Category, out float[] samples, out int sampleRate)) {
                 return ScanCue.BuildSample(e.X, e.Y, samples, sampleRate);
             }
@@ -110,9 +110,9 @@ namespace TangledeepAccess.Gameplay {
             foreach (Poi poi in Surroundings.CollectVisible(hero)) {
                 int x = (int)poi.Pos.x - (int)hp.x;
                 int y = (int)poi.Pos.y - (int)hp.y;
-                _current.Add(new ObjectRadarRing.Entry(x, y, poi.Category));
+                _current.Add(new ObjectRadarSnapshot.Entry(x, y, poi.Category));
             }
-            _ring.Load(_current);
+            _snapshot.Load(_current);
         }
     }
 }

@@ -3,19 +3,19 @@ using TangledeepAccess.Gameplay;
 using Xunit;
 
 namespace TangledeepAccess.Tests.Gameplay {
-    public class ObjectRadarRingTests {
-        private static IList<ObjectRadarRing.Entry> Set(params (int x, int y)[] items) {
-            var list = new List<ObjectRadarRing.Entry>();
+    public class ObjectRadarSnapshotTests {
+        private static IList<ObjectRadarSnapshot.Entry> Set(params (int x, int y)[] items) {
+            var list = new List<ObjectRadarSnapshot.Entry>();
             foreach (var it in items) {
-                list.Add(new ObjectRadarRing.Entry(it.x, it.y));
+                list.Add(new ObjectRadarSnapshot.Entry(it.x, it.y));
             }
             return list;
         }
 
         // Drain a loaded ring into the (x, y) sequence it pings.
-        private static List<(int x, int y)> Sweep(ObjectRadarRing ring) {
+        private static List<(int x, int y)> Sweep(ObjectRadarSnapshot ring) {
             var order = new List<(int, int)>();
-            ObjectRadarRing.Entry? e;
+            ObjectRadarSnapshot.Entry? e;
             while ((e = ring.Next()).HasValue) {
                 order.Add((e.Value.X, e.Value.Y));
             }
@@ -23,15 +23,15 @@ namespace TangledeepAccess.Tests.Gameplay {
         }
 
         [Fact]
-        public void EmptyRingIsDoneAndYieldsNull() {
-            var ring = new ObjectRadarRing();
+        public void EmptySnapshotIsDoneAndYieldsNull() {
+            var ring = new ObjectRadarSnapshot();
             Assert.True(ring.SweepDone);
             Assert.Null(ring.Next());
         }
 
         [Fact]
         public void LoadSortsByXThenYImmediately() {
-            var ring = new ObjectRadarRing();
+            var ring = new ObjectRadarSnapshot();
             ring.Load(Set((2, 5), (1, 9), (1, 3)));
             // Column-major: x ascending, then y ascending -> (1,3), (1,9), (2,5).
             Assert.Equal(new List<(int, int)> { (1, 3), (1, 9), (2, 5) }, Sweep(ring));
@@ -39,7 +39,7 @@ namespace TangledeepAccess.Tests.Gameplay {
 
         [Fact]
         public void NextReturnsNullAndSweepDoneAfterExhaustion() {
-            var ring = new ObjectRadarRing();
+            var ring = new ObjectRadarSnapshot();
             ring.Load(Set((0, 0), (1, 0)));
             Assert.False(ring.SweepDone);
             ring.Next();
@@ -51,7 +51,7 @@ namespace TangledeepAccess.Tests.Gameplay {
 
         [Fact]
         public void LoadReplacesTheSnapshotAndRewinds() {
-            var ring = new ObjectRadarRing();
+            var ring = new ObjectRadarSnapshot();
             ring.Load(Set((5, 0), (6, 0)));
             ring.Next(); // consume one
 
@@ -66,7 +66,7 @@ namespace TangledeepAccess.Tests.Gameplay {
         public void DoesNotWrap() {
             // Unlike a cycling ring, the snapshot is one-shot: after the last entry Next stays null
             // until the next Load.
-            var ring = new ObjectRadarRing();
+            var ring = new ObjectRadarSnapshot();
             ring.Load(Set((0, 0)));
             Assert.NotNull(ring.Next()); // the single entry
             Assert.Null(ring.Next());    // no wrap back to the start
@@ -75,7 +75,7 @@ namespace TangledeepAccess.Tests.Gameplay {
 
         [Fact]
         public void ClearEmptiesAndMarksDone() {
-            var ring = new ObjectRadarRing();
+            var ring = new ObjectRadarSnapshot();
             ring.Load(Set((0, 0), (1, 1)));
             ring.Clear();
             Assert.Equal(0, ring.Count);
@@ -85,9 +85,9 @@ namespace TangledeepAccess.Tests.Gameplay {
 
         [Fact]
         public void CarriesCategoryThroughTheSnapshot() {
-            var ring = new ObjectRadarRing();
-            ring.Load(new List<ObjectRadarRing.Entry> {
-                new ObjectRadarRing.Entry(0, 0, RadarCategory.Monster),
+            var ring = new ObjectRadarSnapshot();
+            ring.Load(new List<ObjectRadarSnapshot.Entry> {
+                new ObjectRadarSnapshot.Entry(0, 0, RadarCategory.Monster),
             });
             Assert.Equal(RadarCategory.Monster, ring.Next().Value.Category);
         }
