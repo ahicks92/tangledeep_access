@@ -116,35 +116,60 @@ namespace TangledeepAccess.Gameplay {
 
         private static void ReadStatus(MessageBuilder message, HeroPC hero) {
             StatBlock stats = hero.myStats;
-            Bar(message.ListItem(), stats, StatTypes.HEALTH, "health");
-            Bar(message.ListItem(), stats, StatTypes.STAMINA, "stamina");
-            Bar(message.ListItem(), stats, StatTypes.ENERGY, "energy");
+            Bar(message.ListItem(), stats, StatTypes.HEALTH, "hp");
+            Bar(message.ListItem(), stats, StatTypes.STAMINA, "sta");
+            Bar(message.ListItem(), stats, StatTypes.ENERGY, "eng");
+            // Charge toward an extra turn, shown in the HUD as "Extra Turn: N%". Player-only
+            // (the action timer is a hero concept; pets/allies have no equivalent display).
+            int ct = hero.GetActionTimerDisplay();
+            if (ct < 0) {
+                ct = 0;
+            }
+
+            message.ListItem(ct + " percent ct");
             message.ListItem("Level " + stats.GetLevel());
             AppendStatuses(message, stats);
         }
 
         /// <summary>
         /// Append the HUD-visible, non-passive status effects on <paramref name="stats"/>, each as its
-        /// own list item ("bad: " prefix for negatives, a turn count for temporary ones). Shared by the
-        /// hero's own status read and the ally read so both speak effects identically. The filter
-        /// mirrors the game's status bar: permanent job/feat passives are excluded.
+        /// own list item ("bad:" prefix for negatives, a "x N" stack count, a turn count for temporary
+        /// ones). Shared by the hero's own status read and the ally read so both speak effects
+        /// identically. The filter mirrors the game's status bar: permanent job/feat passives are
+        /// excluded, and duplicate effects (same <c>refName</c>) collapse into one entry with a stack
+        /// count, exactly as the game's icon bar stacks them (<c>RefreshStatuses</c>).
         /// </summary>
         internal static void AppendStatuses(MessageBuilder message, StatBlock stats) {
+            // Collapse duplicates by refName, preserving first-seen order: the first occurrence
+            // carries the spoken name/duration, the count carries how many stacked.
+            List<StatusEffect> ordered = new List<StatusEffect>();
+            Dictionary<string, int> counts = new Dictionary<string, int>();
             foreach (StatusEffect status in stats.GetAllStatuses()) {
                 if (!status.showIcon || status.passiveAbility) {
                     continue;
                 }
 
-                string name = GameLabelReader.Clean(status.abilityName);
-                if (name == null) {
+                if (GameLabelReader.Clean(status.abilityName) == null) {
                     continue;
                 }
 
+                if (counts.TryGetValue(status.refName, out int n)) {
+                    counts[status.refName] = n + 1;
+                    continue;
+                }
+
+                counts[status.refName] = 1;
+                ordered.Add(status);
+            }
+
+            foreach (StatusEffect status in ordered) {
+                message.ListItem(status.isPositive ? null : "bad:");
+                message.Fragment(GameLabelReader.Clean(status.abilityName));
+                message.PushQuantity(counts[status.refName]);
                 // Temporary effects carry a turn count; permanent ones do not.
-                string duration = status.CheckDurTriggerOn(StatusTrigger.PERMANENT)
-                    ? ""
-                    : " " + status.curDuration + " turns";
-                message.ListItem((status.isPositive ? "" : "bad: ") + name + duration);
+                if (!status.CheckDurTriggerOn(StatusTrigger.PERMANENT)) {
+                    message.Fragment(status.curDuration + " turns");
+                }
             }
         }
 
