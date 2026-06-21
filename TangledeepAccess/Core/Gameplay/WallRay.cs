@@ -11,6 +11,12 @@ namespace TangledeepAccess.Gameplay {
     /// can leave a tile in a straight column unflagged while the wall beyond it is flagged). Sight is
     /// applied to the wall itself: the first impassable tile within range is reported only if that
     /// tile is visible, so a wall in an unexplored/dark area is not pinged.</para>
+    ///
+    /// <para>Stepping out of bounds counts as hitting the map edge — the world boundary is the
+    /// hardest wall there is and is always known to the player (you can feel the edge of the map),
+    /// so it is pinged unconditionally (no visibility gate). Without this, a hero standing on the
+    /// edge of the playable area hears nothing in that direction, because the game's own
+    /// <c>InBounds</c> excludes the outermost ring where the map-edge tiles live.</para>
     /// </summary>
     public static class WallRay {
         /// <summary>
@@ -30,7 +36,7 @@ namespace TangledeepAccess.Gameplay {
                 int x = ox + dx * d;
                 int y = oy + dy * d;
                 if (!inBounds(x, y)) {
-                    return null; // walked off the map without hitting a wall
+                    return (int?)d; // stepped onto the map edge: a wall, always known
                 }
                 if (isWall(x, y)) {
                     // The wall blocks the ray. Ping it only if it is within the player's sight.

@@ -29,14 +29,15 @@ namespace TangledeepAccess.Tests.Gameplay {
 
         [Fact]
         public void NoWallInRangeIsNull() {
-            Assert.Null(Cast(10, 6, 0, -1, 8, Set(), Set()));
+            // Far from any boundary so the map edge is out of range too.
+            Assert.Null(Cast(10, 20, 0, -1, 8, Set(), Set()));
         }
 
         [Fact]
         public void WallOutOfRangeIsNull() {
-            // Wall 10 tiles south but range is 8.
-            var walls = Set("10,-4"); // would be d=10 from y=6; also out of bounds, but range caps first
-            Assert.Null(Cast(10, 6, 0, -1, 8, walls, Set("10,-4")));
+            // Wall 10 tiles south but range is 8; origin kept clear of the map edge.
+            var walls = Set("10,10"); // d=10 from y=20, out of range
+            Assert.Null(Cast(10, 20, 0, -1, 8, walls, Set("10,10")));
         }
 
         [Fact]
@@ -54,9 +55,23 @@ namespace TangledeepAccess.Tests.Gameplay {
         }
 
         [Fact]
-        public void RayStopsAtMapEdge() {
-            // Heading south from y=2 with no wall: leaves bounds at y=-1 (d=3) -> null.
-            Assert.Null(Cast(10, 2, 0, -1, 8, Set(), Set()));
+        public void PingsMapEdgeAsWall() {
+            // Heading south from y=2 with no wall: leaves bounds at y=-1 (d=3). The map edge is
+            // itself a wall and must ping at that distance — the live bug was it returning null.
+            Assert.Equal(3, Cast(10, 2, 0, -1, 8, Set(), Set()));
+        }
+
+        [Fact]
+        public void MapEdgePingIsNotVisibilityGated() {
+            // No tiles visible at all, but the world boundary is always known — still pings.
+            Assert.Equal(3, Cast(10, 2, 0, -1, 8, Set(), Set()));
+        }
+
+        [Fact]
+        public void InBoundsWallBeatsFartherMapEdge() {
+            // A visible wall before the edge wins over the edge behind it.
+            var walls = Set("10,1");
+            Assert.Equal(1, Cast(10, 2, 0, -1, 8, walls, Set("10,1")));
         }
     }
 }

@@ -57,10 +57,11 @@ namespace TangledeepAccess.Gameplay {
         }
 
         /// <summary>
-        /// Tiles to the first impassable wall along (dx, dy), or null if no visible wall is in
-        /// range. The march passes through passable tiles even when an individual tile is not
-        /// currently flagged visible — only the wall's own visibility gates the ping (see
-        /// <see cref="WallRay"/>). The visibility predicate is only called on in-bounds wall tiles.
+        /// Tiles to the first impassable wall along (dx, dy), or null if no wall is in range. The
+        /// march passes through passable tiles even when an individual tile is not currently flagged
+        /// visible — only the wall's own visibility gates the ping (see <see cref="WallRay"/>). The
+        /// visibility predicate is only called on in-bounds wall tiles; the map edge (an
+        /// out-of-bounds step) pings unconditionally.
         /// </summary>
         private static double? WallDistance(HeroPC hero, Vector2 origin, int dx, int dy) {
             int? d = WallRay.DistanceToWall(
