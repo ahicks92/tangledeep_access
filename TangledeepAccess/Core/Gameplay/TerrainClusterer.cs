@@ -52,6 +52,63 @@ namespace TangledeepAccess.Gameplay {
         public double FillFraction => (double)CellCount / (Width * Height);
 
         /// <summary>
+        /// A canonical member cell — the lexicographically smallest by x then y. It is always an actual
+        /// member of the cluster (unlike a bounding-box corner, which on a ragged region may be empty)
+        /// and unique across clusters (regions are disjoint, so no cell belongs to two), so two pools
+        /// whose bounding boxes overlap — one filling the bottom-left, the other the top-right of the
+        /// same box — still get distinct ids. Used as the stable half of a cluster's scanner identity.
+        /// </summary>
+        public TerrainCell CanonicalCell {
+            get {
+                TerrainCell best = Cells[0];
+                foreach (TerrainCell c in Cells) {
+                    if (c.X < best.X || (c.X == best.X && c.Y < best.Y)) {
+                        best = c;
+                    }
+                }
+
+                return best;
+            }
+        }
+
+        /// <summary>
+        /// Like <see cref="NearestCellTo"/> but considering only members the caller's
+        /// <paramref name="visible"/> predicate accepts (cells currently in sight), so a pool only
+        /// partly in view is represented by the nearest part actually visible. <paramref name="any"/>
+        /// reports whether <em>any</em> member was visible; when false the returned cell is meaningless
+        /// and the caller falls back to <see cref="NearestCellTo"/>. Same king-move (Chebyshev)
+        /// tie-break as <see cref="NearestCellTo"/>.
+        /// </summary>
+        public TerrainCell NearestVisibleCellTo(int hx, int hy, Func<int, int, bool> visible, out bool any) {
+            TerrainCell best = Cells[0];
+            int bestCheb = int.MaxValue;
+            int bestManh = int.MaxValue;
+            any = false;
+            foreach (TerrainCell c in Cells) {
+                if (!visible(c.X, c.Y)) {
+                    continue;
+                }
+
+                int adx = Math.Abs(c.X - hx);
+                int ady = Math.Abs(c.Y - hy);
+                int cheb = Math.Max(adx, ady);
+                int manh = adx + ady;
+                if (!any
+                    || cheb < bestCheb
+                    || (cheb == bestCheb && manh < bestManh)
+                    || (cheb == bestCheb && manh == bestManh && c.X < best.X)
+                    || (cheb == bestCheb && manh == bestManh && c.X == best.X && c.Y < best.Y)) {
+                    best = c;
+                    bestCheb = cheb;
+                    bestManh = manh;
+                    any = true;
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>
         /// The member cell closest to (<paramref name="hx"/>, <paramref name="hy"/>) by king-move
         /// (Chebyshev) distance — the real step count in 8-direction movement — ties broken by the
         /// smaller Manhattan distance, then by x, then y for a stable choice. This is the point the

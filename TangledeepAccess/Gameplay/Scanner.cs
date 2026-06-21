@@ -45,14 +45,35 @@ namespace TangledeepAccess.Gameplay {
         public int TieX;     // the nearest point at rescan — the stable sort tie-break
         public int TieY;
 
+        /// <summary>
+        /// A stable identity across rescans, so a rebuilt snapshot can put the player back on the same
+        /// feature by key rather than by (now-dead) object reference. An actor keys on its game-stable
+        /// <c>actorUniqueID</c>; a terrain cluster on its kind plus a canonical member cell. The two
+        /// shapes carry distinct prefixes, so their key spaces never collide.
+        /// </summary>
+        public abstract string Key { get; }
+
         /// <summary>Whether the feature is still on the map (an actor not gone; terrain always is).</summary>
         public abstract bool IsPresent(HashSet<int> liveActorIds);
 
-        /// <summary>The point Goto travels to — the live actor position, or a cluster's nearest cell.</summary>
+        /// <summary>The nearest point overall, visibility-agnostic: the frozen sort point and the
+        /// fallback Goto target. Live for actors, the cluster's nearest cell for terrain.</summary>
         public abstract Vector2 NearestPointTo(Vector2 hero);
 
-        /// <summary>Append this feature's spoken description (name + offset, or terrain region).</summary>
-        public abstract void Speak(MessageBuilder message, HeroPC hero, Map map);
+        /// <summary>
+        /// The point representing this feature in the current view, and whether it qualifies for it. In
+        /// the Visible view (<paramref name="visibleView"/>) that is the nearest <em>currently visible</em>
+        /// point — an actor's tile if it is in sight, a terrain cluster's nearest visible cell — and the
+        /// returned bool reports whether any such point exists, so a pool only partly in view is
+        /// represented (and included) by the part in sight. Outside the Visible view the point is
+        /// <see cref="NearestPointTo"/> and the bool is always true. The out point is always set (the
+        /// nearest overall when nothing is visible), so callers that ignore the bool still get a target.
+        /// </summary>
+        public abstract bool ReferencePoint(Vector2 hero, bool visibleView, out Vector2 point);
+
+        /// <summary>Append this feature's spoken description (name + offset, or terrain region). In the
+        /// Visible view the offset is to the nearest visible point, matching what put it in the view.</summary>
+        public abstract void Speak(MessageBuilder message, HeroPC hero, Map map, bool visibleView);
     }
 
     /// <summary>A single map actor (monster, item, NPC, stairs, non-terrain object), by stable id.</summary>
@@ -60,6 +81,8 @@ namespace TangledeepAccess.Gameplay {
         public int ActorId;
         public int X; // snapshot tile position — the fallback for a gone actor
         public int Y;
+
+        public override string Key => "actor:" + ActorId;
 
         public override bool IsPresent(HashSet<int> liveActorIds) => liveActorIds.Contains(ActorId);
 
@@ -69,7 +92,12 @@ namespace TangledeepAccess.Gameplay {
             return (a != null && !a.destroyed) ? a.GetPos() : new Vector2(X, Y);
         }
 
-        public override void Speak(MessageBuilder message, HeroPC hero, Map map) {
+        public override bool ReferencePoint(Vector2 hero, bool visibleView, out Vector2 point) {
+            point = NearestPointTo(hero);
+            return !visibleView || Visibility.VisibleNow(point);
+        }
+
+        public override void Speak(MessageBuilder message, HeroPC hero, Map map, bool visibleView) {
             Actor a = map != null ? map.FindActorByID(ActorId) : null;
             if (a == null || a.destroyed || hero == null) {
                 message.Fragment("gone"); // resolved nothing, or it died/was opened since the scan
@@ -101,6 +129,13 @@ namespace TangledeepAccess.Gameplay {
         public TerrainCluster Cluster;
         public string Name;
 
+        public override string Key {
+            get {
+                TerrainCell c = Cluster.CanonicalCell;
+                return "terrain:" + Cluster.Kind + ":" + c.X + "," + c.Y;
+            }
+        }
+
         public override bool IsPresent(HashSet<int> liveActorIds) => true; // terrain persists across navigation
 
         public override Vector2 NearestPointTo(Vector2 hero) {
@@ -108,13 +143,26 @@ namespace TangledeepAccess.Gameplay {
             return new Vector2(c.X, c.Y);
         }
 
-        public override void Speak(MessageBuilder message, HeroPC hero, Map map) {
+        public override bool ReferencePoint(Vector2 hero, bool visibleView, out Vector2 point) {
+            if (visibleView) {
+                TerrainCell v = Cluster.NearestVisibleCellTo((int)hero.x, (int)hero.y, Visibility.VisibleNow, out bool any);
+                if (any) {
+                    point = new Vector2(v.X, v.Y);
+                    return true;
+                }
+            }
+
+            point = NearestPointTo(hero); // a non-visible view, or no member in sight: the nearest overall
+            return !visibleView;
+        }
+
+        public override void Speak(MessageBuilder message, HeroPC hero, Map map, bool visibleView) {
             Vector2 hp = hero.GetPos();
-            TerrainCell near = Cluster.NearestCellTo((int)hp.x, (int)hp.y);
+            ReferencePoint(hp, visibleView, out Vector2 near);
             int pct = (int)Math.Round(Cluster.FillFraction * 100);
             message.Fragment(Name);
             message.Fragment(Cluster.Width + " by " + Cluster.Height);
-            message.PushRelativeCoordinates(new Vector2(near.X - (int)hp.x, near.Y - (int)hp.y));
+            message.PushRelativeCoordinates(new Vector2((int)near.x - (int)hp.x, (int)near.y - (int)hp.y));
             message.Fragment(pct + "% filled");
         }
     }
@@ -184,15 +232,20 @@ namespace TangledeepAccess.Gameplay {
     /// (water, mud, ...) is the exception, clustered into regions by <see cref="TerrainClusterer"/> so a
     /// pool reads as one feature rather than dozens of tiles.
     ///
-    /// <para><b>Snapshot model.</b> The list is a snapshot — built once by walking <c>actorsInMap</c>
-    /// (and clustering terrain), then held — so paging through it never reshuffles under you as monsters
-    /// move. The snapshot freezes only the <em>membership and order</em> (the features, their category,
-    /// and the nearest-first sort); pressing End ("rescan") rebuilds it, and it auto-rebuilds on a map
-    /// change. Per the project's no-stale-speech rule, the per-feature name and offset are NOT frozen:
-    /// each is re-queried live at speak time, so a moved monster's offset is current. An actor that has
-    /// since died or been opened is "gone": stepping skips it rather than landing on it. Sort uses
-    /// Manhattan distance from the hero to the feature's nearest point at rescan, ties broken by that
-    /// point's x then y.</para>
+    /// <para><b>Snapshot model.</b> The list is a snapshot — built by walking <c>actorsInMap</c> (and
+    /// clustering terrain), then held — so paging through it never reshuffles under you as monsters move.
+    /// The snapshot freezes only the <em>membership and order</em> (the features, their category, and the
+    /// nearest-first sort). It rebuilds on a map change, on End ("rescan"), and — the auto-rescan — once
+    /// a game turn has elapsed, rebuilt lazily on the next scanner key. Because turns advance only when
+    /// the player acts, the rebuild never lands mid-paging: between turns the world is static, so the
+    /// list is stable while you read it, and it refreshes exactly when the world changed. A rebuild does
+    /// not cost you your place: the selection is reconciled by each feature's stable
+    /// <see cref="ScanFeature.Key"/> (see <see cref="ScanReconcile"/>), so you stay on the same feature,
+    /// or fall back to the nearest survivor if it vanished. Per the project's no-stale-speech rule, the
+    /// per-feature name and offset are NOT frozen: each is re-queried live at speak time, so a moved
+    /// monster's offset is current. An actor that has since died or been opened is "gone": stepping skips
+    /// it rather than landing on it. Sort uses Manhattan distance from the hero to the feature's nearest
+    /// point at rescan, ties broken by that point's x then y.</para>
     ///
     /// <para>Two navigation axes: category (the broad bucket, defaulting to
     /// <see cref="ScanCategory.Visible"/> — only features in current line of sight) and entry (one
@@ -230,6 +283,7 @@ namespace TangledeepAccess.Gameplay {
         // never read stale state from it.
         private static List<ScanFeature> _snapshot;
         private static Map _snapshotMap;
+        private static int _snapshotTurn; // GameMasterScript.turnNumber the snapshot was built on
 
         // The default view, restored on first scan and whenever a rescan empties the current category.
         private const ScanCategory DefaultCategory = ScanCategory.Visible;
@@ -357,7 +411,7 @@ namespace TangledeepAccess.Gameplay {
                 ? (dir > 0 ? 0 : view.Count - 1)
                 : (cur + dir + view.Count) % view.Count;
             _selected = view[next];
-            SpeakEntry(message, view[next], next, view.Count);
+            SpeakEntry(message, view[next], next, view.Count, _category);
             AutoJump(hero);
             return message;
         }
@@ -366,7 +420,8 @@ namespace TangledeepAccess.Gameplay {
         // tile cues but speaking nothing — the navigation's own scanner reading is the spoken text.
         private static void AutoJump(HeroPC hero) {
             if (_autoJump && _selected != null) {
-                ExplorationCursor.JumpToSilent(_selected.NearestPointTo(hero.GetPos()));
+                _selected.ReferencePoint(hero.GetPos(), _category == ScanCategory.Visible, out Vector2 p);
+                ExplorationCursor.JumpToSilent(p);
             }
         }
 
@@ -390,7 +445,8 @@ namespace TangledeepAccess.Gameplay {
                 return new MessageBuilder().Fragment("nothing selected");
             }
 
-            return ExplorationCursor.JumpTo(_selected.NearestPointTo(hero.GetPos()));
+            _selected.ReferencePoint(hero.GetPos(), _category == ScanCategory.Visible, out Vector2 target);
+            return ExplorationCursor.JumpTo(target);
         }
 
         /// <summary>
@@ -413,7 +469,8 @@ namespace TangledeepAccess.Gameplay {
                 return new MessageBuilder().Fragment("nothing selected");
             }
 
-            return ExplorationCursor.ExamineAt(_selected.NearestPointTo(hero.GetPos()));
+            _selected.ReferencePoint(hero.GetPos(), _category == ScanCategory.Visible, out Vector2 at);
+            return ExplorationCursor.ExamineAt(at);
         }
 
         /// <summary>
@@ -436,8 +493,10 @@ namespace TangledeepAccess.Gameplay {
         }
 
         /// <summary>
-        /// Rescan (End): rebuild the snapshot from the live map, reset to <see cref="ScanCategory.All"/>,
-        /// select the nearest feature, and speak the fresh readout.
+        /// Rescan (End): force a rebuild from the live map now, keeping the current category and — via
+        /// key reconcile — the selected feature (or the nearest survivor if it is gone), then speak it.
+        /// The snapshot also auto-rebuilds each turn, so this is the explicit "refresh now" affordance
+        /// rather than the only way to refresh.
         /// </summary>
         public static MessageBuilder Rescan() {
             var message = new MessageBuilder();
@@ -455,7 +514,8 @@ namespace TangledeepAccess.Gameplay {
             }
 
             message.ListItem();
-            SpeakCategory(message, _category, view, 0);
+            int idx = Math.Max(0, IndexOf(view, _selected));
+            SpeakCategory(message, _category, view, idx);
             return message;
         }
 
@@ -464,7 +524,15 @@ namespace TangledeepAccess.Gameplay {
         // Ensure a snapshot exists for the current map, building one if absent or stale. Returns
         // whether it has any entries.
         private static bool EnsureSnapshot(HeroPC hero) {
-            if (_snapshot == null || _snapshotMap != MapMasterScript.activeMap) {
+            // Rebuild on first use, a map change, or — the auto-rescan — once a game turn has elapsed.
+            // The rebuild is lazy (it happens only when a scanner key is next pressed), so it costs
+            // nothing per frame; and turns advance only when the player acts, so the list never
+            // reshuffles while they are paging it between turns. DoRescan reconciles the selection by
+            // key, so a fresh snapshot keeps the player on the same feature (or the nearest survivor if
+            // it vanished) rather than snapping back to the top.
+            if (_snapshot == null
+                || _snapshotMap != MapMasterScript.activeMap
+                || _snapshotTurn != GameMasterScript.turnNumber) {
                 DoRescan(hero);
             }
 
@@ -472,17 +540,41 @@ namespace TangledeepAccess.Gameplay {
         }
 
         private static void DoRescan(HeroPC hero) {
+            // Remember the feature we were on and the order it lived in, so the rebuilt snapshot can put
+            // us back on it by stable key — or, if it vanished, the nearest survivor (mirroring the
+            // overlay KeyGraph's focus recovery). Capture the prior order before _snapshot is replaced.
+            HashSet<int> live = LiveIds();
+            string priorKey = _selected?.Key;
+            // Only when a snapshot already exists — the first scan (and a post-Reset rebuild) has none,
+            // and View walks _snapshot, so reading it here would dereference null.
+            List<string> priorOrder = _snapshot != null ? KeysOf(View(_category, live)) : null;
+
             _snapshot = BuildSnapshot(hero);
             _snapshotMap = MapMasterScript.activeMap;
+            _snapshotTurn = GameMasterScript.turnNumber;
+
             // Keep the current category across a rescan — only fall back to the default when the rescan
             // left it with no live entries (so a refresh on the same floor doesn't yank you off
             // "Monsters" just because they moved, but does rescue you off an emptied bucket).
-            List<ScanFeature> view = View(_category, LiveIds());
+            List<ScanFeature> view = View(_category, live);
             if (view.Count == 0) {
                 _category = DefaultCategory;
-                view = View(_category, LiveIds());
+                view = View(_category, live);
             }
-            _selected = view.Count > 0 ? view[0] : null;
+
+            int idx = ScanReconcile.Resolve(priorKey, priorOrder, KeysOf(view));
+            _selected = idx >= 0 ? view[idx] : null;
+        }
+
+        // The features' stable keys in view order — the input to reconcile (the prior order to walk and
+        // the new view to land in).
+        private static List<string> KeysOf(List<ScanFeature> view) {
+            var keys = new List<string>(view.Count);
+            foreach (ScanFeature f in view) {
+                keys.Add(f.Key);
+            }
+
+            return keys;
         }
 
         private static List<ScanFeature> BuildSnapshot(HeroPC hero) {
@@ -500,8 +592,8 @@ namespace TangledeepAccess.Gameplay {
             // below, so a terrain destructible never reaches Categorize — and a destructible that is
             // *not* flagged terrain stays an Object, which is how a mis-flagged terrain tile surfaces.
             foreach (Actor a in map.actorsInMap) {
-                if (a == null || a == hero || a.destroyed) {
-                    continue; // an opened crate / slain monster lingers in actorsInMap until cleanup
+                if (a == hero || ActorPresence.IsGone(a)) {
+                    continue; // an opened crate (isDestroyed husk) / slain monster lingers until cleanup
                 }
                 if (TerrainFeature.Is(a)) {
                     continue; // terrain — clustered below, not an individual feature
@@ -571,8 +663,11 @@ namespace TangledeepAccess.Gameplay {
                     continue;
                 }
                 if (cat == ScanCategory.Visible) {
-                    if (!Visibility.VisibleNow(f.NearestPointTo(hero))) {
-                        continue; // the explored snapshot, narrowed to what the hero can see right now
+                    if (!f.ReferencePoint(hero, true, out _)) {
+                        // The explored snapshot, narrowed to what the hero can see right now. A pool only
+                        // partly in sight still qualifies — on its nearest visible cell — so the scanner's
+                        // Visible view matches the F2 radar, which clusters over the in-sight set.
+                        continue;
                     }
                 } else if (cat != ScanCategory.All && f.Category != cat) {
                     continue;
@@ -595,7 +690,7 @@ namespace TangledeepAccess.Gameplay {
             }
 
             foreach (Actor a in map.actorsInMap) {
-                if (a != null && a != hero && !a.destroyed) {
+                if (a != hero && !ActorPresence.IsGone(a)) {
                     ids.Add(a.actorUniqueID);
                 }
             }
@@ -609,13 +704,13 @@ namespace TangledeepAccess.Gameplay {
             message.Fragment(Label(cat));
             message.Fragment(view.Count.ToString());
             message.ListItem();
-            SpeakEntry(message, view[index], index, view.Count);
+            SpeakEntry(message, view[index], index, view.Count, cat);
         }
 
-        private static void SpeakEntry(MessageBuilder message, ScanFeature feature, int index, int count) {
+        private static void SpeakEntry(MessageBuilder message, ScanFeature feature, int index, int count, ScanCategory cat) {
             HeroPC hero = GameMasterScript.heroPCActor;
             Map map = MapMasterScript.activeMap;
-            feature.Speak(message, hero, map);
+            feature.Speak(message, hero, map, cat == ScanCategory.Visible);
             message.ListItem().PushFraction(index + 1, count);
         }
 

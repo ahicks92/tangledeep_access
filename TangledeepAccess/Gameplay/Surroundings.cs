@@ -31,8 +31,8 @@ namespace TangledeepAccess.Gameplay {
 
             Map map = MapMasterScript.activeMap;
             foreach (Actor actor in map.actorsInMap) {
-                if (actor == null || actor == hero || actor.destroyed) {
-                    continue; // an opened crate / slain monster lingers here until cleanup — skip it
+                if (actor == hero || ActorPresence.IsGone(actor)) {
+                    continue; // an opened crate (isDestroyed husk) / slain monster lingers here — skip it
                 }
                 if (TerrainFeature.Is(actor)) {
                     continue; // terrain — clustered below into one Poi per pool, not pinged per tile
