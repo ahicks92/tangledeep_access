@@ -24,7 +24,6 @@ namespace TangledeepAccess.Speech {
 
         // --- Hotbar ----------------------------------------------------------------------------
 
-        public const string Hotbar = "hotbar";
         public const string HotbarEmpty = "empty";
         public const string HotbarUnavailable = "unavailable";
 

@@ -83,36 +83,39 @@ namespace TangledeepAccess.Gameplay {
             return null;
         }
 
-        /// <summary>Read one bank (<paramref name="page"/> 0 or 1):
-        /// "hotbar &lt;page+1&gt;, 1 &lt;name&gt;, 2 &lt;name&gt;, …".</summary>
+        /// <summary>
+        /// Read one bank (<paramref name="page"/> 0 or 1) positionally: just the slot contents in
+        /// order — "&lt;name&gt;, &lt;name&gt;, …, empty, empty" — with empty slots read as "empty"
+        /// and no slot numbers or bank prefix. The slot is implied by position (players fill left to
+        /// right), so dropping the numbers makes the common case far faster to hear; the caller
+        /// already knows which bar they asked for (backtick vs Ctrl+backtick). An entirely empty bar
+        /// collapses to a single "empty" rather than eight.
+        /// </summary>
         public static void Read(MessageBuilder message, int page) {
             HotbarBindable[] hb = UIManagerScript.hotbarAbilities;
-            message.Fragment(ModStrings.Hotbar);
             if (hb == null) {
                 message.Fragment(ModStrings.HotbarUnavailable);
                 return;
             }
 
-            message.Fragment((page + 1).ToString());
-
             bool any = false;
             for (int i = 0; i < PageSize; i++) {
                 int idx = page * PageSize + i;
-                if (idx >= hb.Length) {
-                    break;
-                }
-
-                string name = SlotName(hb[idx]);
-                if (name != null) {
-                    // Forced comma so the first slot is set off from the page number too
-                    // ("hotbar 2, 1, Foo, …"), not run together as "hotbar 2 1, Foo".
-                    message.ListItemForcedComma((i + 1) + ", " + name);
+                if (idx < hb.Length && SlotName(hb[idx]) != null) {
                     any = true;
+                    break;
                 }
             }
 
             if (!any) {
                 message.Fragment(ModStrings.HotbarEmpty);
+                return;
+            }
+
+            for (int i = 0; i < PageSize; i++) {
+                int idx = page * PageSize + i;
+                string name = (idx < hb.Length ? SlotName(hb[idx]) : null) ?? ModStrings.HotbarEmpty;
+                message.ListItem(name);
             }
         }
 
