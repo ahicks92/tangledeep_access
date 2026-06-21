@@ -31,6 +31,11 @@ namespace TangledeepAccess.Ui {
         CharacterSheet,
         Shop,
         Options,
+        // The monster corral: the keeper's list of tamed monsters plus its food picker sub-screen
+        // (one id, sub-identified so focus resets when moving between list and feeding).
+        Corral,
+        // The corral breeding screen (pick two monsters, breed).
+        CorralBreed,
 
         // Mod-only UIs (no game widget) go below here as they are added.
 

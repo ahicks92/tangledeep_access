@@ -57,6 +57,9 @@ Finally, note that the main menu has some focus issues and text boxes do not wor
 - Use shovel: v
 - Pick up item: g
 - Announce your status (hp, effects, etc): y
+- Cycle through your pets/summons: ctrl + y (next), ctrl + shift + y (previous) — announces the ally's name, direction, and status
+- Repeat the current pet/summon's status: shift + y
+- Command the current pet/summon (follow distance, abilities, come here, attack, dismiss): alt + y
 - Read your current tile (map, coordinates, terrain, items, exits): s
 - Repeat the last thing spoken: apostrophe
 - Step through the combat log: ctrl + left bracket / ctrl + right bracket
@@ -125,3 +128,23 @@ Navigating and reading:
 - Confirm past a warning (e.g. selling a favorited item): ctrl + enter
 - Adjust inline sliders: left/right arrow, add shift for bigger increments
 - Close a UI: escape. The game does not always play a sound for this, that's not a mod bug.
+
+### Monster Corral, Pets, and Breeding
+
+The monster corral (talk to the ranch keeper, then "View Monsters") is navigated like
+any other UI. Each monster is a row; left/right moves through its actions:
+
+- Make pet: take the monster out as your active pet (it must be happy enough)
+- Feed: opens a food list — pick a food to feed it; its reaction is read out
+- Groom: opens the grooming menu (a normal dialog)
+- Release: asks for confirmation, then lets the monster go for good
+- `k` on a monster reads its full info: powers, weapon power, core stats, beauty
+  effect, known food likes/dislikes, and how it feels about every other monster
+
+Breeding (share a romantic meal with the keeper) lists your monsters; confirm on a
+monster to select it, pick two, then "breed selected". With two chosen, the header
+reads each one's feelings toward the other and whether they're willing.
+
+Naming a newly tamed or bred monster uses a text box, which is not yet supported, so
+you can't type a custom name — but the naming prompt's "Random" and "That's the name!"
+buttons both work (the latter lets the keeper name it for you), so nothing blocks.

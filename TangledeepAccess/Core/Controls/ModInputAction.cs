@@ -65,6 +65,16 @@ namespace TangledeepAccess.Controls {
         ReadHere,
         ReadStatus,
 
+        // The ally/summon family (free play, on the Y key beside the hero's own status). The mod
+        // keeps a "current ally" selection over the hero's summons (pet included): Cycle steps it
+        // (Ctrl+Y next, Ctrl+Shift+Y previous) and announces the landing ally; ReadActiveAlly
+        // (Shift+Y) repeats the current ally's status; OpenActiveAllyMenu (Alt+Y) opens that ally's
+        // command conversation (the game's pet-behaviour menu), read by the dialog overlay.
+        CycleAllyNext,
+        CycleAllyPrev,
+        ReadActiveAlly,
+        OpenActiveAllyMenu,
+
         /// <summary>Speak a hotbar bank's contents without firing anything. Dx carries the bank
         /// (0 = bar 1 on backtick, 1 = bar 2 on Ctrl+backtick). Claimed by the top-priority
         /// <see cref="Ui.OverlayDispatcher"/>-bypassing hotbar drainer so it works inside menus too.

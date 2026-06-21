@@ -114,8 +114,30 @@ namespace TangledeepAccess.Controls {
             if (Input.GetKeyDown(KeyCode.S)) {
                 return ModInputAction.Of(ModInputKind.ReadHere);
             }
+            // The Y family. Bare Y reads the hero's own status; the modified combos drive the
+            // current-ally selection: Ctrl+Y next, Ctrl+Shift+Y previous, Shift+Y repeats the
+            // current ally's status, Alt+Y opens its command menu. Y is mod-claimed (the game binds
+            // nothing to it), and Ctrl only doubles as the screen reader's stop key — fine here, as
+            // with Ctrl+H. Any other Y combo falls through to the game.
             if (Input.GetKeyDown(KeyCode.Y)) {
-                return ModInputAction.Of(ModInputKind.ReadStatus);
+                bool yCtrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+                bool yAlt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+                bool yShift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                if (!yCtrl && !yAlt && !yShift) {
+                    return ModInputAction.Of(ModInputKind.ReadStatus);
+                }
+                if (yCtrl && yShift && !yAlt) {
+                    return ModInputAction.Of(ModInputKind.CycleAllyPrev);
+                }
+                if (yCtrl && !yShift && !yAlt) {
+                    return ModInputAction.Of(ModInputKind.CycleAllyNext);
+                }
+                if (yShift && !yCtrl && !yAlt) {
+                    return ModInputAction.Of(ModInputKind.ReadActiveAlly);
+                }
+                if (yAlt && !yCtrl && !yShift) {
+                    return ModInputAction.Of(ModInputKind.OpenActiveAllyMenu);
+                }
             }
             // The H family of in-sight reads, split by modifier: bare H lists monsters, Ctrl+H lists
             // treasure (powerups/items/gold/containers), Alt+H lists terrain. The game's H action (Hide UI) is relocated

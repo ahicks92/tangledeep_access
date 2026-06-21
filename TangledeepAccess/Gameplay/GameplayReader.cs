@@ -42,6 +42,14 @@ namespace TangledeepAccess.Gameplay {
                 return;
             }
 
+            // Alt+Y opens the current ally's command conversation (a side effect, like the nav aids),
+            // so it lives here rather than in the pure read path. The dialog overlay then voices the
+            // menu; we only speak when there is no ally to command.
+            if (action.Kind == ModInputKind.OpenActiveAllyMenu) {
+                speech.Speak(AllyReader.OpenActiveMenu());
+                return;
+            }
+
             speech.Speak(GameplayReader.Execute(action));
         }
     }
@@ -75,6 +83,15 @@ namespace TangledeepAccess.Gameplay {
                 case ModInputKind.ReadStatus:
                     ReadStatus(message, hero);
                     break;
+                case ModInputKind.CycleAllyNext:
+                    AllyReader.Cycle(message, hero, 1);
+                    break;
+                case ModInputKind.CycleAllyPrev:
+                    AllyReader.Cycle(message, hero, -1);
+                    break;
+                case ModInputKind.ReadActiveAlly:
+                    AllyReader.ReadActive(message, hero);
+                    break;
                 case ModInputKind.ReadMonsters:
                     ReadMonsters(message, hero);
                     break;
@@ -103,10 +120,17 @@ namespace TangledeepAccess.Gameplay {
             Bar(message.ListItem(), stats, StatTypes.STAMINA, "stamina");
             Bar(message.ListItem(), stats, StatTypes.ENERGY, "energy");
             message.ListItem("Level " + stats.GetLevel());
+            AppendStatuses(message, stats);
+        }
 
+        /// <summary>
+        /// Append the HUD-visible, non-passive status effects on <paramref name="stats"/>, each as its
+        /// own list item ("bad: " prefix for negatives, a turn count for temporary ones). Shared by the
+        /// hero's own status read and the ally read so both speak effects identically. The filter
+        /// mirrors the game's status bar: permanent job/feat passives are excluded.
+        /// </summary>
+        internal static void AppendStatuses(MessageBuilder message, StatBlock stats) {
             foreach (StatusEffect status in stats.GetAllStatuses()) {
-                // Match the game's own status-bar filter: HUD-visible, non-passive effects only,
-                // so the permanent job/feat passives are not read every time.
                 if (!status.showIcon || status.passiveAbility) {
                     continue;
                 }

@@ -84,6 +84,8 @@ namespace TangledeepAccess {
             _dispatcher.Register(new EquipmentOverlay().Handler);       // E tab, gear
             _dispatcher.Register(new ShopOverlay().Handler);            // merchant / banker shop
             _dispatcher.Register(new CharacterSheetOverlay().Handler); // C tab, character stats
+            _dispatcher.Register(new CorralOverlay().Handler);         // monster corral list + food
+            _dispatcher.Register(new CorralBreedOverlay().Handler);    // corral breeding screen
             _dispatcher.Register(new OptionsOverlay().Handler);        // options menu (Esc)
             UiRuntime.Dispatcher = _dispatcher;
 

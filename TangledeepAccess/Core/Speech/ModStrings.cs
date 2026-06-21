@@ -286,5 +286,73 @@ namespace TangledeepAccess.Speech {
             return "damage " + value;
         }
 
+        // --- Monster corral --------------------------------------------------------------------
+
+        public const string CorralHeader = "Monster Corral";
+
+        /// <summary>Spoken by the ally (Y) family when the hero has no summons or pet out.</summary>
+        public const string NoAllies = "no allies";
+
+        /// <summary>An ally's remaining lifespan for a temporary summon, e.g. "5 turns left".</summary>
+        public static string TurnsLeft(int turns) {
+            return turns + " turns left";
+        }
+
+        /// <summary>The corral count, e.g. "3 of 12".</summary>
+        public static string CorralCount(int count) {
+            return count + " of 12";
+        }
+
+        // Per-monster spoken bits.
+        public const string Happiness = "happiness";
+        public const string Weight = "weight";
+        public const string Rarity = "rarity";
+        public const string Beauty = "beauty";
+
+        /// <summary>The food meter as "fed N of M".</summary>
+        public static string FoodMeter(int cur, int max) {
+            return "fed " + cur + " of " + max;
+        }
+
+        /// <summary>Spoken on a monster whose happiness is below the pet threshold.</summary>
+        public const string TooUnhappyForPet = "too unhappy to be a pet";
+
+        /// <summary>Spoken on a monster still angry from an uninsured death.</summary>
+        public const string AngryAtYou = "angry at you";
+
+        // Per-monster action verbs.
+        public const string MakePetAction = "make pet";
+        public const string FeedAction = "feed";
+        public const string GroomAction = "groom";
+        public const string ReleaseAction = "release";
+        public const string ExitCorral = "exit corral";
+
+        /// <summary>Spoken when the player already has an active pet out and tries to take another.</summary>
+        public const string AlreadyHavePet = "you already have a pet out";
+
+        // Food picker.
+        /// <summary>The food-picker header, e.g. "feeding Sparky".</summary>
+        public static string Feeding(string monsterName) {
+            return "feeding " + monsterName;
+        }
+
+        public const string NoFood = "no food to feed";
+        public const string BackToList = "back to monster list";
+        public const string Loves = "loves this";
+        public const string Hates = "hates this";
+
+        // --- Monster breeding ------------------------------------------------------------------
+
+        public const string BreedHeader = "Breed Monsters";
+        public const string BreedSelectTwo = "select two monsters";
+        public const string BreedSelected = "selected";
+        public const string BreedDeselected = "deselected";
+        public const string BreedAction = "breed selected";
+        public const string BreedNeedTwo = "select two monsters first";
+
+        /// <summary>The breed status anchor: how many are selected.</summary>
+        public static string BreedSelectionCount(int count) {
+            return count + " of 2 selected";
+        }
     }
 }
