@@ -19,9 +19,11 @@ namespace TangledeepAccess.Overlays {
     /// changes in place as the player advances. We do NOT key controls to game objects — ids are
     /// plain structural strings — and instead detect content changes via <see cref="SubIdentity"/>:
     /// when the generation string changes, the dispatcher re-announces as if freshly opened. Each
-    /// choice carries its own click handler that drives the game's own confirm on that specific
-    /// button (via the mouse-click path, which ignores the typewriter), so we never depend on the
-    /// game's focus being synced to us.</para>
+    /// choice carries its own click handler that focuses that specific button and drives the game's
+    /// own keyboard confirm (<see cref="UIManagerScript.DialogCursorConfirm()"/>) on it, so we never
+    /// depend on the game's focus already being synced to us. That confirm honors the typewriter — it
+    /// early-returns while text is still revealing (<c>dialogInteractableDelayed</c>) — so we cannot
+    /// fast-forward a typing dialog; we wait it out exactly like the keyboard does.</para>
     ///
     /// <para>The vertical list, in order: the body text (read-only), then the value slider / text
     /// box / image if present, then one node per response button. Convenience: a dialog with exactly
@@ -167,9 +169,11 @@ namespace TangledeepAccess.Overlays {
         }
 
         // Activate a specific choice by driving the game's own dialog confirm on it: focus the button
-        // (so the game's confirm targets it), then take the mouse-click confirm path, which ignores
-        // the typewriter state. The game then advances the branch / closes; our next tick sees the
-        // new generation and re-announces.
+        // (so the game's confirm targets it), then call DialogCursorConfirm — the same keyboard
+        // confirm path the game runs, which executes the button's dialogEventScript and advances the
+        // branch / closes. It early-returns while the typewriter is still revealing text
+        // (dialogInteractableDelayed), so this no-ops mid-reveal rather than skipping to the end. Our
+        // next tick sees the new generation and re-announces.
         private static void Activate(UIManagerScript.UIObject choice) {
             if (choice == null) {
                 return;
