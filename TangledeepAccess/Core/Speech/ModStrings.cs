@@ -36,6 +36,10 @@ namespace TangledeepAccess.Speech {
         /// <summary>Confirmation verb when an ability is bound, e.g. "Fireball assigned on hotbar 1 slot 3".</summary>
         public const string Assigned = "assigned";
 
+        /// <summary>Spoken when the player tries to hotbar an item that cannot go on a bar (only
+        /// consumables can — valuables, gear, etc. cannot).</summary>
+        public const string CantHotbar = "can't put that on the hotbar";
+
         // --- Skill sheet: header / modes -------------------------------------------------------
 
         public const string SkillsHeader = "Skills";

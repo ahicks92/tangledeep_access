@@ -60,6 +60,11 @@ namespace TangledeepAccess.Ui {
         /// Zero for commands that carry no argument.</summary>
         public int Arg { get; internal set; }
 
+        /// <summary>A secondary integer payload, set by the dispatcher before invoking a node action —
+        /// currently the hotbar bank (0 = bar 1, 1 = bar 2) for
+        /// <see cref="Controls.ModInputKind.AssignHotbar"/>. Zero for commands that carry no bank.</summary>
+        public int Bank { get; internal set; }
+
         public OverlayCtx(MessageBuilder message, Modifiers modifiers) {
             Message = message;
             Modifiers = modifiers;

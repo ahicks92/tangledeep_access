@@ -79,9 +79,14 @@ modules.
 - **Status (`Y`)** — health/stamina/energy (current of max), level, and active effects
   (the game's own status-bar filter: `showIcon && !passiveAbility`, named by `abilityName`
   with a turn count).
-- **Hotbar (`` ` ``, backtick)** — cycle to the next hotbar page and read its bound
-  abilities/items by slot. Backtick replaces the game's Ctrl "Cycle Hotbars" (Ctrl is the
-  screen reader's stop key), stripped on load — see `KeymapPatch`.
+- **Hotbar** — the mod drops the game's swap concept and makes both bars directly addressable.
+  `1`-`8` fire **bar 1**, `Ctrl+1`-`8` fire **bar 2**; `` ` `` (backtick) speaks bar 1 and
+  `` Ctrl+` `` speaks bar 2. The assign UIs (skill-sheet abilities, inventory consumables) follow
+  the same scheme: `1`-`8` assign to bar 1, `Ctrl+1`-`8` to bar 2. Firing is the game's own path:
+  for `Ctrl+digit` the input patch momentarily forces `indexOfActiveHotbar` to 1 and lets the
+  game's `UpdateInput` fire (so all its guards + log→speech stay intact), then resets it (relies on
+  the bare `"Use Hotbar Slot N"` Rewired binding still firing while Ctrl is held). The game's Ctrl
+  "Cycle Hotbars" and the `Ctrl+1`-`8` weapon-switch dupes are stripped on load — see `KeymapPatch`.
 - **Repeat (`'`)** — re-speaks `PrismSpeech.LastSpoken` (handled in the pump, which owns the
   speech instance).
 - **Combat-log history (`Ctrl+[` / `Ctrl+]`)** — step back / forward through the spoken log.

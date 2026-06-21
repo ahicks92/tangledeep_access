@@ -52,14 +52,18 @@ namespace TangledeepAccess.Controls {
                 return ModInputAction.Of(ModInputKind.MarkTrash);
             }
 
-            // Number keys 1-8 assign the focused control to that hotbar slot (the skill sheet uses
-            // this; other overlays have no handler, so it falls back to re-reading the label). The
-            // slot number rides in Dx. KeyCode.Alpha1..Alpha8 are consecutive.
+            // Number keys 1-8 assign the focused control to that hotbar slot (the skill sheet and
+            // inventory use this; other overlays have no handler, so it falls back to re-reading the
+            // label). The slot rides in Dx; the bank in Dy — bare digit = bar 1 (0), Ctrl+digit =
+            // bar 2 (1), mirroring how the digits fire in play. KeyCode.Alpha1..Alpha8 are
+            // consecutive. The screen reader's Ctrl "stop" only silences speech, so the combo is free.
             for (KeyCode k = KeyCode.Alpha1; k <= KeyCode.Alpha8; k++) {
                 if (Input.GetKeyDown(k)) {
+                    bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
                     return new ModInputAction {
                         Kind = ModInputKind.AssignHotbar,
                         Dx = k - KeyCode.Alpha1 + 1,
+                        Dy = ctrl ? 1 : 0,
                     };
                 }
             }
@@ -146,18 +150,50 @@ namespace TangledeepAccess.Controls {
         }
 
         /// <summary>
-        /// The hotbar key: backtick cycles to the next page and reads it. Claimed by the top-priority
-        /// <see cref="HotbarInputDrainer"/> so the hotbar is reachable even while a full-screen overlay
-        /// owns input (e.g. flip pages before assigning in the skill sheet). Backtick replaces the
-        /// game's Ctrl "Cycle Hotbars" — Ctrl is the screen reader's stop key — and the game's Ctrl
-        /// binding is stripped on load (see KeymapPatch).
+        /// The hotbar READ keys: backtick speaks bar 1, Ctrl+backtick speaks bar 2 (the bank rides in
+        /// Dx, 0 or 1). Claimed by the top-priority <see cref="HotbarInputDrainer"/> so the bars are
+        /// readable even while a full-screen overlay owns input (e.g. check a bar before assigning in
+        /// the skill sheet). This scheme replaces the game's Ctrl "Cycle Hotbars" — Ctrl is the screen
+        /// reader's stop key — whose binding is stripped on load (see KeymapPatch). Firing the bars
+        /// (the digits) is the game's own job; see <see cref="HotbarBankTwoFireRequested"/>.
         /// </summary>
         public static ModInputAction? Hotbar() {
             if (Input.GetKeyDown(KeyCode.BackQuote)) {
-                return ModInputAction.Of(ModInputKind.CycleHotbar);
+                bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+                return new ModInputAction { Kind = ModInputKind.ReadHotbar, Dx = ctrl ? 1 : 0 };
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// True on the frame the player presses Ctrl + a digit 1-8 (and no Alt/Shift) — the "fire bar
+        /// 2" gesture. The mod does NOT fire the slot itself: the caller (the in-game input patch)
+        /// momentarily forces the active bank to 1 and lets the game's own <c>UpdateInput</c> fire
+        /// it, so all the game's firing guards and its log→speech stay intact. The bare digit's
+        /// Rewired "Use Hotbar Slot N" binding still fires while Ctrl is held (no-modifier bindings
+        /// ignore held modifiers), and the active bank decides which bar it hits. We require Ctrl
+        /// alone so future Ctrl+Shift / Ctrl+Alt combos stay free.
+        /// </summary>
+        public static bool HotbarBankTwoFireRequested() {
+            bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+            if (!ctrl) {
+                return false;
+            }
+
+            bool alt = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt);
+            bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+            if (alt || shift) {
+                return false;
+            }
+
+            for (KeyCode k = KeyCode.Alpha1; k <= KeyCode.Alpha8; k++) {
+                if (Input.GetKeyDown(k)) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

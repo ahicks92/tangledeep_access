@@ -77,11 +77,16 @@ Audio cues you turn on and off. Ctrl + an f-key toggles an aid; shift + the same
 
 ### The Hotbar
 
-The game offers two hotbars that you swap between (note: we will probably mod this to be easier):
+The game has two hotbars ("bars"). The mod drops the game's swap mechanic and makes both
+bars directly reachable instead — bar 1 on the bare keys, bar 2 with Ctrl held:
 
-- Switch hotbar page, reading the new page: backtick
-- Use hotbar slot: 1-8
-- Assign something to the active hotbar: 1-8 in the appropriate menu with the item selected
+- Use a bar 1 slot: 1-8
+- Use a bar 2 slot: Ctrl+1-8
+- Read bar 1: backtick
+- Read bar 2: Ctrl+backtick
+- Assign the selected thing to bar 1: 1-8 in the appropriate menu (skills for abilities,
+  consumables for items)
+- Assign the selected thing to bar 2: Ctrl+1-8 in that menu
 
 You can't clear hotbars, but you can reassign any slot whenever you want.
 

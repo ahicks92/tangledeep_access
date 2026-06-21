@@ -142,13 +142,24 @@ namespace TangledeepAccess.Controls {
             KeyEvac.Delete(KeyCode.PageUp),                   // mod always needs PageUp
             KeyEvac.Delete(KeyCode.PageDown),                 // mod always needs PageDown
 
-            // Ctrl+digit duplicates the F5-F8 weapon switches; drop the duplicates.
+            // Ctrl+1-8 is the mod's "fire hotbar bar 2" gesture: the patch forces the active bank to
+            // 1 and lets the game's own UpdateInput fire the bare "Use Hotbar Slot N" binding (which
+            // still triggers while Ctrl is held, since no-modifier Rewired bindings ignore held
+            // modifiers). Any Ctrl+digit binding the game ships (default Ctrl+1-4 duplicate the F5-F8
+            // weapon switches) must be cleared, or Rewired would (a) suppress the bare fire while Ctrl
+            // is held and (b) double-fire that action. Delete all eight so every slot fires cleanly,
+            // regardless of what the default map binds. Idempotent: deleting an absent binding no-ops.
             KeyEvac.Delete(KeyCode.Alpha1, Ctrl),
             KeyEvac.Delete(KeyCode.Alpha2, Ctrl),
             KeyEvac.Delete(KeyCode.Alpha3, Ctrl),
             KeyEvac.Delete(KeyCode.Alpha4, Ctrl),
+            KeyEvac.Delete(KeyCode.Alpha5, Ctrl),
+            KeyEvac.Delete(KeyCode.Alpha6, Ctrl),
+            KeyEvac.Delete(KeyCode.Alpha7, Ctrl),
+            KeyEvac.Delete(KeyCode.Alpha8, Ctrl),
 
-            // Ctrl belongs to the screen reader (stop-speech). Default "Cycle Hotbars" sits here.
+            // Ctrl belongs to the screen reader (stop-speech). Default "Cycle Hotbars" sits here; the
+            // mod removes the swap concept (both bars are directly addressable), so this just goes.
             KeyEvac.Delete(KeyCode.LeftControl),
         };
 

@@ -25,9 +25,9 @@ namespace TangledeepAccess.Overlays {
     /// passives</b> row (the slot-using passives, with the "N of 4" budget; confirm equips/unequips),
     /// an <b>always-on passives</b> row (confirm toggles), then one row per job the hero knows an
     /// active ability from (confirm <i>uses</i> the ability, number keys 1-8 <i>assign</i> it to that
-    /// hotbar slot on the active page — backtick cycles the page, even from here), and a <b>show
-    /// unlearned</b> toggle that adds every job's unlearned abilities (suffixed "unlearned") so the
-    /// player can browse the whole tree. Changing skills is gated to safe areas, mirroring the game.</para>
+    /// slot on bar 1, Ctrl+1-8 to bar 2), and a <b>show unlearned</b> toggle that adds every job's
+    /// unlearned abilities (suffixed "unlearned") so the player can browse the whole tree. Changing
+    /// skills is gated to safe areas, mirroring the game.</para>
     ///
     /// <para><b>Data source:</b> the hero's own learned abilities for what they have, and
     /// <c>masterJobList</c> for the unlearned tree. Read live each build; never cached. Each row's
@@ -414,7 +414,7 @@ namespace TangledeepAccess.Overlays {
         }
 
         // One row per job the hero knows an active ability from (or, with show-unlearned, per job that
-        // has any active). Confirm uses the ability; number keys 1-8 assign it to that hotbar slot.
+        // has any active). Confirm uses the ability; 1-8 assign it to bar 1, Ctrl+1-8 to bar 2.
         private static void BuildActiveJobRows(IOverlayBuilder builder, HeroPC hero) {
             var byJob = new Dictionary<CharacterJobs, List<AbilityScript>>();
             var seen = new HashSet<string>();
@@ -470,7 +470,7 @@ namespace TangledeepAccess.Overlays {
                     new NodeVtable {
                         Label = ctx => ActiveLabel(ctx.Message, ability, learned),
                         // Confirm uses the ability (gated like the game); read-info reads the tooltip;
-                        // number keys 1-8 bind it to that slot on the active hotbar page.
+                        // 1-8 bind it to that slot on bar 1, Ctrl+1-8 to bar 2.
                         OnClick = (ctx, mods) => UseAbility(ctx, ability, learned),
                         OnReadInfo = ctx =>
                             ctx.Message.Fragment(GameLabelReader.Clean(ability.GetInformationForTooltip())),
@@ -586,6 +586,7 @@ namespace TangledeepAccess.Overlays {
 
         private static void AssignAbility(OverlayCtx ctx, AbilityScript a, bool learned) {
             int slot = ctx.Arg;
+            int bank = ctx.Bank;
             if (slot < 1 || slot > Hotbar.PageSize) {
                 return;
             }
@@ -602,12 +603,12 @@ namespace TangledeepAccess.Overlays {
                 return;
             }
 
-            Hotbar.Assign(a, slot);
+            Hotbar.Assign(a, slot, bank);
             UIManagerScript.PlayCursorSound("UITick");
             ctx.Message
                 .Fragment(GameLabelReader.Clean(a.GetNameForUI()))
                 .Fragment(ModStrings.Assigned)
-                .Fragment(ModStrings.OnHotbar(Hotbar.ActivePage + 1, slot));
+                .Fragment(ModStrings.OnHotbar(bank + 1, slot));
         }
 
         // --- Slot-mode helpers -----------------------------------------------------------------

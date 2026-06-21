@@ -393,8 +393,10 @@ namespace TangledeepAccess.Ui {
                 return result;
             }
 
-            // Carry the command's integer payload (e.g. the AssignHotbar slot) to the node action.
+            // Carry the command's integer payloads (e.g. the AssignHotbar slot in Dx and bank in Dy)
+            // to the node action.
             ctx.Arg = command.Dx;
+            ctx.Bank = command.Dy;
 
             // Non-nav, non-confirm keys map to a NodeVtable action on the focused control (read
             // info, mark favorite/trash, assign-to-hotbar, …). One generic path: invoke the selected

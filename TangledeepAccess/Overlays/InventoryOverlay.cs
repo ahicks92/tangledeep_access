@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using HarmonyLib;
 using TangledeepAccess.Focus;
+using TangledeepAccess.Gameplay;
 using TangledeepAccess.Speech;
 using TangledeepAccess.Ui;
 using TangledeepAccess.Ui.Graph;
@@ -34,7 +35,8 @@ namespace TangledeepAccess.Overlays {
     /// <c>actorUniqueID</c> (the builder rejects duplicate ids).</para>
     ///
     /// <para><b>Scope:</b> item identity/info, favorite/trash (Enter on the cell or the
-    /// row-wide F / Minus keys), sort buttons, use/eat, and single-item drop all work. Two gaps
+    /// row-wide F / Minus keys), sort buttons, use/eat, hotbar-slotting (row-wide 1-8 → bar 1,
+    /// Ctrl+1-8 → bar 2), and single-item drop all work. Two gaps
     /// remain: dropping part of a <i>stack</i> needs the quantity-slider dialog we do not handle yet
     /// (gated with a spoken notice), and using a <i>targeted</i> item hands off to the game's
     /// targeting, which is only partially narrated until the targeting controller is built.</para>
@@ -252,13 +254,39 @@ namespace TangledeepAccess.Overlays {
             message.PushQuantity(item.GetQuantity());
         }
 
-        // Add a cell to the current item row, attaching the row-wide favorite/trash key handlers so
-        // the F / Minus keys act on this item from ANY cell in its row (item, use, drop, …), not
-        // just the favorite/trash cells. Confirm still runs each cell's own OnClick.
+        // Add a cell to the current item row, attaching the row-wide favorite/trash/assign key
+        // handlers so the F / Minus / 1-8 keys act on this item from ANY cell in its row (item, use,
+        // drop, …), not just dedicated cells. Confirm still runs each cell's own OnClick.
         private static void AddRowCell(IOverlayBuilder builder, ControlId id, Item item, NodeVtable vtable) {
             vtable.OnMarkFavorite = ctx => ToggleFavorite(ctx, item);
             vtable.OnMarkTrash = ctx => ToggleTrash(ctx, item);
+            vtable.OnAssignHotbar = ctx => AssignConsumable(ctx, item);
             builder.AddItem(id, vtable);
+        }
+
+        // Bind a consumable to a hotbar slot: 1-8 → bar 1, Ctrl+1-8 → bar 2 (slot in ctx.Arg, bank in
+        // ctx.Bank). Only consumables can go on a bar; anything else (a valuable) is refused. Mirrors
+        // the skill sheet's ability-assign. No safe-area gate — the game lets you slot consumables
+        // anywhere, unlike changing skills.
+        private static void AssignConsumable(OverlayCtx ctx, Item item) {
+            int slot = ctx.Arg;
+            int bank = ctx.Bank;
+            if (slot < 1 || slot > Hotbar.PageSize) {
+                return;
+            }
+
+            if (!(item is Consumable consumable)) {
+                UIManagerScript.PlayCursorSound("Error");
+                ctx.Message.Fragment(ModStrings.CantHotbar);
+                return;
+            }
+
+            Hotbar.Assign(consumable, slot, bank);
+            UIManagerScript.PlayCursorSound("UITick");
+            ctx.Message
+                .Fragment(GameLabelReader.Clean(item.displayName))
+                .Fragment(ModStrings.Assigned)
+                .Fragment(ModStrings.OnHotbar(bank + 1, slot));
         }
 
         // Use (or eat) the item. Mirrors the game's submenu gating: food checks food-full, other

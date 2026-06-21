@@ -20,14 +20,21 @@ namespace TangledeepAccess.Dev {
         public static string Inject(string verb) {
             string v = (verb ?? "").Trim().ToLowerInvariant();
 
-            // Number keys 1-8 assign the focused control to that hotbar slot (the skill sheet uses
-            // this). Routes through the menu drainer like any menu key.
-            if (v.Length == 1 && v[0] >= '1' && v[0] <= '8') {
+            // Number keys 1-8 assign the focused control to that hotbar slot (skill sheet / inventory).
+            // A "ctrl" prefix ("ctrl5") targets bar 2; a bare digit targets bar 1. Routes through the
+            // menu drainer like any menu key.
+            bool ctrlAssign = v.Length == 5 && v.StartsWith("ctrl") && v[4] >= '1' && v[4] <= '8';
+            if ((v.Length == 1 && v[0] >= '1' && v[0] <= '8') || ctrlAssign) {
+                char digit = ctrlAssign ? v[4] : v[0];
                 InputQueue.Enqueue(
                     MenuInputDrainer.Instance,
-                    new ModInputAction { Kind = ModInputKind.AssignHotbar, Dx = v[0] - '0' }
+                    new ModInputAction {
+                        Kind = ModInputKind.AssignHotbar,
+                        Dx = digit - '0',
+                        Dy = ctrlAssign ? 1 : 0,
+                    }
                 );
-                return "menu assign slot " + v + " -> queued\n";
+                return "menu assign slot " + digit + (ctrlAssign ? " bar 2" : " bar 1") + " -> queued\n";
             }
 
             // The hotbar keys are realized by the top-priority HotbarInputDrainer, not the menu
@@ -80,19 +87,21 @@ namespace TangledeepAccess.Dev {
                 case "trash":
                     action = ModInputAction.Of(ModInputKind.MarkTrash);
                     break;
-                case "cycle":
                 case "backtick":
-                    source = HotbarInputDrainer.Instance;
-                    action = ModInputAction.Of(ModInputKind.CycleHotbar);
-                    break;
                 case "hotbar":
                 case "readhotbar":
                     source = HotbarInputDrainer.Instance;
-                    action = ModInputAction.Of(ModInputKind.ReadHotbar);
+                    action = new ModInputAction { Kind = ModInputKind.ReadHotbar, Dx = 0 };
+                    break;
+                case "ctrlbacktick":
+                case "hotbar2":
+                case "readhotbar2":
+                    source = HotbarInputDrainer.Instance;
+                    action = new ModInputAction { Kind = ModInputKind.ReadHotbar, Dx = 1 };
                     break;
                 default:
                     return "[unknown verb] '" + verb
-                        + "' - menu: up|down|left|right|confirm|dangerousconfirm|cancel|readinfo|readsecondary|favorite|trash|1-8|cycle|hotbar\n";
+                        + "' - menu: up|down|left|right|confirm|dangerousconfirm|cancel|readinfo|readsecondary|favorite|trash|1-8|ctrl1-8|hotbar|hotbar2\n";
             }
 
             OverlayDispatcher dispatcher = UiRuntime.Dispatcher;

@@ -5,11 +5,13 @@ using TangledeepAccess.Speech;
 namespace TangledeepAccess.Gameplay {
     /// <summary>
     /// Game-touching hotbar operations, shared by the <see cref="Controls.HotbarInputDrainer"/>
-    /// (cycle/read in any context) and the skill sheet (assign a learned ability to a slot, report
-    /// where one is bound). The hotbar is the game's own state — a flat <c>hotbarAbilities</c> array
-    /// of two 8-slot pages, with <c>indexOfActiveHotbar</c> (a private static) selecting the page
-    /// that number keys 1-8 fire and that we assign into. We read and flip that state on demand;
-    /// never cache it.
+    /// (read a bank in any context) and the assign UIs (skill sheet abilities, inventory
+    /// consumables). The hotbar is the game's own state — a flat <c>hotbarAbilities</c> array of two
+    /// 8-slot banks, with <c>indexOfActiveHotbar</c> (a private static) selecting which bank the
+    /// game's own number-key firing hits. The mod removes the swap concept: bar 1 (slots 0-7) is
+    /// fired by bare 1-8, bar 2 (slots 8-15) by Ctrl+1-8 — the latter by momentarily forcing the
+    /// active index to 1 around the game's own firing (see the input patch). We address banks by
+    /// explicit index here; never cache state, re-query on demand.
     /// </summary>
     internal static class Hotbar {
         public const int PageSize = 8;
@@ -20,25 +22,40 @@ namespace TangledeepAccess.Gameplay {
                 AccessTools.Field(typeof(UIManagerScript), "indexOfActiveHotbar")
             );
 
-        public static int ActivePage => ActivePageField();
-
-        /// <summary>Flip to the next page via the game's own mutator, which keeps ability-firing
-        /// (number keys 1-8) pointed at the right page.</summary>
-        public static void Cycle() {
-            UIManagerScript.ToggleSecondaryHotbar();
+        /// <summary>Set the game's active-bank index directly (no HUD swap animation). The input
+        /// patch forces this to 1 for the frame the game fires a Ctrl+digit press, then back to 0 —
+        /// the resting value — so the game's own firing path hits bar 2. A raw field write, not
+        /// <c>ToggleSecondaryHotbar</c>, which would also drive the on-screen swap animation.</summary>
+        public static void SetActivePage(int page) {
+            ActivePageField() = page;
         }
 
         /// <summary>
-        /// Bind a learned ability to slot 1-8 (1-based) on the active page, deduping so the same
-        /// ability is not left on two slots. Returns false on a bad slot.
+        /// Bind a learned ability to slot 1-8 (1-based) on <paramref name="bank"/> (0 or 1), deduping
+        /// so the same ability is not left on two slots. Returns false on a bad slot.
         /// </summary>
-        public static bool Assign(AbilityScript ability, int slotOneBased) {
+        public static bool Assign(AbilityScript ability, int slotOneBased, int bank) {
             if (ability == null || slotOneBased < 1 || slotOneBased > PageSize) {
                 return false;
             }
 
-            int flat = ActivePage * PageSize + (slotOneBased - 1);
+            int flat = bank * PageSize + (slotOneBased - 1);
             UIManagerScript.AddAbilityToSlot(ability, flat, removeDupes: true);
+            return true;
+        }
+
+        /// <summary>
+        /// Bind a consumable to slot 1-8 (1-based) on <paramref name="bank"/> (0 or 1). Returns false
+        /// on a bad slot. Unlike abilities we do not dedupe — a stack can legitimately sit on more
+        /// than one slot, matching the game's own drag-to-hotbar.
+        /// </summary>
+        public static bool Assign(Consumable consumable, int slotOneBased, int bank) {
+            if (consumable == null || slotOneBased < 1 || slotOneBased > PageSize) {
+                return false;
+            }
+
+            int flat = bank * PageSize + (slotOneBased - 1);
+            UIManagerScript.AddItemToSlot(consumable, flat, removeDupes: false);
             return true;
         }
 
@@ -66,8 +83,9 @@ namespace TangledeepAccess.Gameplay {
             return null;
         }
 
-        /// <summary>Read the active page: "hotbar &lt;page&gt;, 1 &lt;name&gt;, 2 &lt;name&gt;, …".</summary>
-        public static void Read(MessageBuilder message) {
+        /// <summary>Read one bank (<paramref name="page"/> 0 or 1):
+        /// "hotbar &lt;page+1&gt;, 1 &lt;name&gt;, 2 &lt;name&gt;, …".</summary>
+        public static void Read(MessageBuilder message, int page) {
             HotbarBindable[] hb = UIManagerScript.hotbarAbilities;
             message.Fragment(ModStrings.Hotbar);
             if (hb == null) {
@@ -75,7 +93,6 @@ namespace TangledeepAccess.Gameplay {
                 return;
             }
 
-            int page = ActivePage;
             message.Fragment((page + 1).ToString());
 
             bool any = false;

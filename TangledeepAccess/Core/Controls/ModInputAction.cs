@@ -50,8 +50,10 @@ namespace TangledeepAccess.Controls {
         /// <summary>Toggle the focused control's "trash" mark (menus). A toggle, like MarkFavorite.</summary>
         MarkTrash,
 
-        /// <summary>Assign the focused control to a hotbar slot (menus). Dx carries the slot, 1-8.
-        /// The skill sheet binds its active abilities this way; overlays with no handler re-read.</summary>
+        /// <summary>Assign the focused control to a hotbar slot (menus). Dx carries the slot, 1-8;
+        /// Dy carries the bank (0 = bar 1 on a bare digit, 1 = bar 2 on Ctrl+digit). The skill sheet
+        /// binds active abilities this way and the inventory binds consumables; overlays with no
+        /// handler re-read.</summary>
         AssignHotbar,
 
         /// <summary>The game's UI focus changed — a non-keyboard event source, not a key press. A
@@ -62,15 +64,18 @@ namespace TangledeepAccess.Controls {
         // Free-play spatial queries. ReadHere reads the player's own tile (S).
         ReadHere,
         ReadStatus,
+
+        /// <summary>Speak a hotbar bank's contents without firing anything. Dx carries the bank
+        /// (0 = bar 1 on backtick, 1 = bar 2 on Ctrl+backtick). Claimed by the top-priority
+        /// <see cref="Ui.OverlayDispatcher"/>-bypassing hotbar drainer so it works inside menus too.
+        /// The mod owns these on backtick / Ctrl+backtick because the game's own "Cycle Hotbars"
+        /// (which this scheme replaces) defaults to Ctrl, which the screen reader claims.</summary>
         ReadHotbar,
 
         /// <summary>Read every monster in line of sight, nearest first by Manhattan distance, each as
         /// its short name and screen-relative offset (H). Threat overview, no HP/attitude detail.</summary>
         ReadMonsters,
 
-        /// <summary>Cycle to the next hotbar page and read it. The mod owns this on backtick because
-        /// the game's own "Cycle Hotbars" defaults to Ctrl, which the screen reader claims.</summary>
-        CycleHotbar,
         RepeatLast,
 
         // Combat-log history scrollback (free play). Step a browse cursor through the captured
