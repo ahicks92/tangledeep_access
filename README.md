@@ -60,6 +60,7 @@ Finally, note that the main menu has some focus issues and text boxes do not wor
 - Read your current tile (map, coordinates, terrain, items, exits): s
 - Repeat the last thing spoken: apostrophe
 - Step through the combat log: ctrl + left bracket / ctrl + right bracket
+- Announce hostiles near you: h
 - Move the exploration cursor: u i o j l m comma dot
 - Announce what the exploration cursor is on: k
 - Examine what the exploration cursor is on: shift + k
