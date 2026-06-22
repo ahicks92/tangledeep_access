@@ -367,9 +367,6 @@ namespace TangledeepAccess.Speech {
         public const string NoRumors = "no active rumors";
         public const string AbandonRumor = "abandon rumor";
 
-        // Combat log tab.
-        public const string CombatLogEmpty = "combat log empty";
-
         // Monsterpedia tab: a not-yet-defeated monster the player has no information on.
         public const string Undiscovered = "undiscovered";
     }

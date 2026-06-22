@@ -9,22 +9,24 @@ using TMPro;
 namespace TangledeepAccess.Overlays {
     /// <summary>
     /// The journal (Alt+Q — the game's <c>UITabs.RUMORS</c> window, a <c>JournalScript</c>-driven
-    /// panel under the PlayerHUD rather than a <c>currentFullScreenUI</c>). It has four tabs the game
-    /// switches between with a button bar: <b>recipes</b>, <b>rumors</b> (the quest log), <b>combat
-    /// log</b>, and the <b>monsterpedia</b>. We re-present it as one owned grid built fresh every tick:
+    /// panel under the PlayerHUD rather than a <c>currentFullScreenUI</c>). The game has four tabs, but
+    /// we surface three: <b>recipes</b>, <b>rumors</b> (the quest log), and the <b>monsterpedia</b>. We
+    /// deliberately drop the game's <b>combat log</b> tab — it is already reachable in-game (Ctrl plus
+    /// the bracket keys), and its hundreds of lines would be hundreds of throwaway graph nodes every
+    /// tick. We re-present the rest as one owned grid built fresh every tick:
     ///
     /// <list type="bullet">
-    /// <item>a <b>tab bar</b> first row (recipes / rumors / combat log / monsterpedia); confirm on a
-    /// cell drives the game's own <c>SwitchJournalTab</c> so the visible panel and our content stay in
-    /// step, and marks the active tab;</item>
-    /// <item>below it, one build function per tab emits that tab's content as further rows — the
-    /// active tab is the game's live <c>JournalScript.journalState</c>.</item>
+    /// <item>a <b>tab bar</b> first row (recipes / rumors / monsterpedia); confirm on a cell drives the
+    /// game's own <c>SwitchJournalTab</c> so the visible panel and our content stay in step, and marks
+    /// the active tab;</item>
+    /// <item>below it, one build function per tab emits that tab's content as further rows — the active
+    /// tab is the game's live <c>JournalScript.journalState</c>, coerced to one we surface (see
+    /// <see cref="ActiveTab"/>) so a persisted "combat log" state still lands on a real tab.</item>
     /// </list>
     ///
     /// <para><b>Data source:</b> each tab reads the underlying live game data directly, independent of
     /// which tab the game has visually active — recipes from <c>MetaProgressScript.recipesKnown</c>,
-    /// rumors from the hero's <c>myQuests</c>, the combat log from
-    /// <c>GameLogScript.journalLogStringBuffer</c>, and the monsterpedia from
+    /// rumors from the hero's <c>myQuests</c>, and the monsterpedia from
     /// <c>BakedMonsterpedia.GetAllMonstersInPedia()</c>. Read live each build; never cached.</para>
     ///
     /// <para><b>Monsterpedia:</b> we list every monster in the pedia as one flat row each. That is
@@ -71,20 +73,27 @@ namespace TangledeepAccess.Overlays {
 
             BuildTabBar(builder);
 
-            switch (JournalScript.journalState) {
+            switch (ActiveTab()) {
                 case JournalTabs.RECIPES:
                     BuildRecipesTab(builder);
-                    break;
-                case JournalTabs.RUMORS:
-                    BuildRumorsTab(builder);
-                    break;
-                case JournalTabs.COMBATLOG:
-                    BuildCombatLogTab(builder);
                     break;
                 case JournalTabs.MONSTERPEDIA:
                     BuildMonsterpediaTab(builder);
                     break;
+                default:
+                    BuildRumorsTab(builder);
+                    break;
             }
+        }
+
+        // The tab whose content we show / mark selected: the game's live journalState, but coerced to a
+        // tab we actually surface. The game persists journalState, so it can be COMBATLOG (a tab we
+        // dropped) on open; we fall back to rumors so the player never lands on an empty body.
+        private static JournalTabs ActiveTab() {
+            JournalTabs state = JournalScript.journalState;
+            return state == JournalTabs.RECIPES || state == JournalTabs.MONSTERPEDIA
+                ? state
+                : JournalTabs.RUMORS;
         }
 
         // --- Tab bar ---------------------------------------------------------------------------
@@ -93,7 +102,6 @@ namespace TangledeepAccess.Overlays {
             builder.StartRow("tabs");
             AddTab(builder, JournalTabs.RECIPES, "ui_btn_recipes");
             AddTab(builder, JournalTabs.RUMORS, "ui_btn_rumors");
-            AddTab(builder, JournalTabs.COMBATLOG, "ui_btn_combatlog");
             AddTab(builder, JournalTabs.MONSTERPEDIA, "ui_btn_monsterpedia");
             builder.EndRow();
         }
@@ -103,7 +111,7 @@ namespace TangledeepAccess.Overlays {
                 ControlId.Structural("journal:tab:" + tab),
                 ctx => {
                     ctx.Message.Fragment(GameLabel(stringKey));
-                    if (JournalScript.journalState == tab) {
+                    if (ActiveTab() == tab) {
                         ctx.Message.Fragment(ModStrings.Selected);
                     }
                 },
@@ -295,33 +303,6 @@ namespace TangledeepAccess.Overlays {
                 builder.AddLabel(
                     ControlId.Structural("journal:rumor:none"),
                     ctx => ctx.Message.Fragment(ModStrings.NoRumors)
-                );
-            }
-        }
-
-        // --- Combat log tab --------------------------------------------------------------------
-
-        private static void BuildCombatLogTab(IOverlayBuilder builder) {
-            Queue<string> buffer = GameLogScript.journalLogStringBuffer;
-            if (buffer == null || buffer.Count == 0) {
-                builder.AddLabel(
-                    ControlId.Structural("journal:log:none"),
-                    ctx => ctx.Message.Fragment(ModStrings.CombatLogEmpty)
-                );
-                return;
-            }
-
-            // The queue is oldest-first; the game shows newest-first, so we walk it in reverse.
-            var lines = new List<string>(buffer);
-            for (int i = lines.Count - 1; i >= 0; i--) {
-                string clean = GameLabelReader.Clean(lines[i]);
-                if (string.IsNullOrEmpty(clean)) {
-                    continue;
-                }
-
-                builder.AddLabel(
-                    ControlId.Structural("journal:log:" + i),
-                    ctx => ctx.Message.Fragment(clean)
                 );
             }
         }

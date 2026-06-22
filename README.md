@@ -115,7 +115,7 @@ Open with alt + one of the following:
 - Equipment: 2
 - Skills: 3
 - Character screen: 4
-- Journal (recipes, rumors, combat log, monsterpedia): q
+- Journal (recipes, rumors, monsterpedia): q
 - Open the options menu/save/quit: escape from the main game screen
 
 Navigating and reading:
@@ -129,12 +129,12 @@ Navigating and reading:
 - Adjust inline sliders: left/right arrow, add shift for bigger increments
 - Close a UI: escape. The game does not always play a sound for this, that's not a mod bug.
 
-### Journal (recipes, rumors, combat log, monsterpedia)
+### Journal (recipes, rumors, monsterpedia)
 
-The journal (alt + q) has four tabs. The first row is a tab bar — left/right moves
-across the tabs (recipes, rumors, combat log, monsterpedia) and confirm switches to the
-focused tab; the selected tab is read as "selected". From any tab move down into that
-tab's content.
+The journal (alt + q) has a tab bar as its first row — left/right moves across the tabs
+(recipes, rumors, monsterpedia) and confirm switches to the focused tab; the selected tab
+is read as "selected". From any tab move down into that tab's content. (The game's combat
+log tab is not included here — read it in-game with ctrl + the bracket keys instead.)
 
 - Recipes: each known recipe is a row, marked "can make" when you have the ingredients.
   `k` reads its full description (ingredients, healing, effects); confirm cooks it, but
@@ -142,7 +142,6 @@ tab's content.
 - Rumors: your active quests. Each is a row; the objective text is read on focus, `k`
   reads the rewards. Move right to "abandon rumor" and confirm to give a quest up (this
   opens the usual confirmation).
-- Combat log: the game's recent log lines, newest first, one per row (read-only).
 - Monsterpedia: every monster in the compendium, one per row — its name once you've
   defeated one, else "undiscovered". `k` reads the game's progressive entry: more detail
   (stats, weapon, abilities, attributes) unlocks as your kill count for that kind grows.
