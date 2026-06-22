@@ -354,5 +354,23 @@ namespace TangledeepAccess.Speech {
         public static string BreedSelectionCount(int count) {
             return count + " of 2 selected";
         }
+
+        // --- Journal (Alt+Q) -------------------------------------------------------------------
+
+        // Recipes tab.
+        public const string NoRecipesKnown = "no recipes known";
+        public const string CanCook = "can make";
+        public const string NoCookingStation = "no cooking station nearby";
+        public const string MissingIngredients = "missing ingredients";
+
+        // Rumors / quests tab.
+        public const string NoRumors = "no active rumors";
+        public const string AbandonRumor = "abandon rumor";
+
+        // Combat log tab.
+        public const string CombatLogEmpty = "combat log empty";
+
+        // Monsterpedia tab: a not-yet-defeated monster the player has no information on.
+        public const string Undiscovered = "undiscovered";
     }
 }

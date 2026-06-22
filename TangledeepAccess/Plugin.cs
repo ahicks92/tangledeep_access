@@ -87,6 +87,7 @@ namespace TangledeepAccess {
             _dispatcher.Register(new CorralOverlay().Handler);         // monster corral list + food
             _dispatcher.Register(new CorralBreedOverlay().Handler);    // corral breeding screen
             _dispatcher.Register(new OptionsOverlay().Handler);        // options menu (Esc)
+            _dispatcher.Register(new JournalOverlay().Handler);        // journal (Alt+Q): recipes/rumors/log/pedia
             UiRuntime.Dispatcher = _dispatcher;
 
             try {
