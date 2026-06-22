@@ -147,6 +147,21 @@ log tab is not included here — read it in-game with ctrl + the bracket keys in
   (stats, weapon, abilities, attributes) unlocks as your kill count for that kind grows.
   This is a long flat list for now; a search is planned.
 
+### Cooking station
+
+The town cooking station (talk to the chef and choose to cook) is a little workbench,
+laid out as rows:
+
+- Frying pan: three ingredient slots, a seasoning slot, and the last dish cooked.
+  Confirm on a filled slot takes that item back out of the pan.
+- Ingredients / seasonings: two rows listing what you can cook with (name and how many
+  you have); confirm adds one to the pan, `k` reads its tooltip.
+- Actions: cook, clear pan, repeat last meal, exit.
+
+Fill the pan with at least two ingredients (plus an optional seasoning) and cook — the
+dish you made is read out. As in the normal game there is no preview; you cook to find
+out what a combination makes.
+
 ### Monster Corral, Pets, and Breeding
 
 The monster corral (talk to the ranch keeper, then "View Monsters") is navigated like

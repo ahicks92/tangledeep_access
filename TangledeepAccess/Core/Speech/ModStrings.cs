@@ -369,5 +369,42 @@ namespace TangledeepAccess.Speech {
 
         // Monsterpedia tab: a not-yet-defeated monster the player has no information on.
         public const string Undiscovered = "undiscovered";
+
+        // --- Cooking station (town campfire) ---------------------------------------------------
+
+        // Row anchors.
+        public const string CookPanRow = "frying pan";
+        public const string CookIngredientsRow = "ingredients";
+        public const string CookSeasoningsRow = "seasonings";
+
+        // Pan slots and the result readout.
+        public static string CookIngredientSlot(int n) {
+            return "ingredient slot " + n;
+        }
+
+        public const string CookSeasoningSlot = "seasoning slot";
+        public const string CookResult = "result";
+        public const string CookNoDish = "no dish yet";
+
+        // Empty pools.
+        public const string NoCookIngredients = "no cooking ingredients";
+        public const string NoSeasonings = "no seasonings";
+
+        // Action button fallback labels (the game's own button text is preferred when present).
+        public const string CookAction = "cook";
+        public const string ClearPanAction = "clear pan";
+        public const string RepeatMealAction = "repeat last meal";
+        public const string ExitCookingAction = "exit";
+
+        // Action results.
+        public const string AddedToPan = "added to pan";
+        public const string SetAsSeasoning = "set as seasoning";
+        public const string RemovedFromPan = "removed";
+        public const string PanFull = "pan is full";
+        public const string NeedTwoIngredients = "need at least two ingredients";
+        public const string Cooked = "cooked";
+        public const string PanCleared = "pan cleared";
+        public const string RepeatedMeal = "repeated last meal";
+        public const string CantRepeatMeal = "can't repeat that meal";
     }
 }

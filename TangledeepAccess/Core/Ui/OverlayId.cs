@@ -34,6 +34,9 @@ namespace TangledeepAccess.Ui {
         // The journal (Alt+Q, the game's RUMORS window): a single overlay covering all four of its
         // tabs — recipes, rumors/quests, combat log, monsterpedia — switched by a tab bar.
         Journal,
+        // The town cooking station (the game's COOKING window): place ingredients + a seasoning in
+        // the pan and cook.
+        Cooking,
         // The monster corral: the keeper's list of tamed monsters plus its food picker sub-screen
         // (one id, sub-identified so focus resets when moving between list and feeding).
         Corral,
