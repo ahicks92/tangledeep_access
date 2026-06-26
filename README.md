@@ -241,3 +241,21 @@ buttons both work (the latter lets the keeper name it for you), so nothing block
   rest of the screen (the rewards above, the new mod and item name below) reads correctly.
   This icon-instead-of-text case is rare; most screens already read right, so it is left
   as-is for now.
+
+## Game Bugs
+
+These are bugs in vanilla Tangledeep itself, not in the mod. They are documented here
+because, without sight, a silent vanilla dead-end is indistinguishable from a mod
+failure — so if you hit one, you know it is the game, not us.
+
+- **The town "Fast Travel" button silently does nothing until you have two
+  waypoints.** Standing on the dungeon stairs in Riverstone Camp opens a "Travel
+  Destination" dialog with a **Fast Travel** button. The button is always fully enabled
+  (it is not greyed out — verified against the live game), but pressing it closes the
+  dialog and opens the waypoint list *only if you have at least two reachable waypoint
+  destinations*. Cedar Caverns 1F is always one; until you have explored a second
+  waypoint floor, there is only one destination, so the button closes the dialog and
+  opens nothing — no message, no sound. A sighted player at least sees the dialog vanish;
+  for us it is pure silence. Nothing is wrong with the mod or your save — you just have
+  not discovered a second waypoint yet. (Verified in the decompiled source:
+  `TryFastTravelMenu` → `BeginFastTravelDialog`, which requires `Count >= 2`.)
